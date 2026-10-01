@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54">
+        <!-- Dumbbell Bar / Dynamic Crossbar -->
+        <path
+            android:fillColor="#D4F23A"
+            android:pathData="M34,49 C34,46.5 35.8,44.5 38.3,44.5 L69.7,44.5 C72.2,44.5 74,46.5 74,49 L74,51 C74,53.5 72.2,55.5 69.7,55.5 L38.3,55.5 C35.8,55.5 34,53.5 34,51 Z" />
+        <!-- Main 'F' Spine and Top Bar -->
+        <path
+            android:fillColor="#D4F23A"
+            android:pathData="M34,31 C34,28.8 35.8,27 38,27 L74,27 C75.7,27 77,28.3 77,30 L77,36 C77,37.7 75.7,39 74,39 L47,39 L47,44.5 L34,44.5 Z" />
+        <!-- Bottom stem of F with athletic slant -->
+        <path
+            android:fillColor="#D4F23A"
+            android:pathData="M34,55.5 L47,55.5 L47,77 C47,79.2 45.2,81 43,81 L38,81 C35.8,81 34,79.2 34,77 Z" />
+        <!-- Left Weight Plate -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M27,38 C27,36.3 28.3,35 30,35 L32,35 L32,65 L30,65 C28.3,65 27,63.7 27,62 Z" />
+        <!-- Right Weight Plate -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M76,38 L78,38 C79.7,38 81,39.3 81,41 L81,59 C81,60.7 79.7,62 78,62 L76,62 Z" />
+        <!-- Center Accent Dot -->
+        <path
+            android:fillColor="#121316"
+            android:pathData="M51,50 A3,3 0 1,1 57,50 A3,3 0 1,1 51,50" />
+    </group>
+</vector>

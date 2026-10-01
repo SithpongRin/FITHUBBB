@@ -1,0 +1,9 @@
+{
+  "versionCode": 2,
+  "versionName": "1.1.0",
+  "apkUrl": "https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/releases/latest/download/app-release.apk",
+  "releaseNotesEn": "Enhanced GPS accuracy filters, UI improvements, and new workout routines.",
+  "releaseNotesKm": "បង្កើនភាពសុក្រឹតនៃការវាស់ចម្ងាយ GPS, កែសម្រួលរចនាបថ Nav Bar និងបន្ថែមលំហាត់ហាត់ប្រាណថ្មីៗ។",
+  "fileSizeBytes": 18450000,
+  "mandatory": false
+}

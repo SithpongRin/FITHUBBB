@@ -1,0 +1,6 @@
+{
+  "name": "FITHUB",
+  "description": "Comprehensive local-first fitness manager for Android featuring workouts, GPS and jump tracking, nutrition, sleep recovery, and analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

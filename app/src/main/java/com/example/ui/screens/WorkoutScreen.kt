@@ -1,0 +1,710 @@
+package com.example.ui.screens
+
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import com.example.calculations.DistanceCalculator
+import com.example.calculations.FormatUtils
+import com.example.calculations.PaceCalculator
+import com.example.localization.StringKey
+import com.example.sensors.JumpDetector
+import com.example.sensors.LocationTracker
+import com.example.ui.components.StatCard
+import com.example.ui.theme.*
+import com.example.ui.viewmodel.FithubViewModel
+import com.example.ui.viewmodel.WeightliftingExerciseDraft
+import com.example.ui.viewmodel.WeightliftingSetDraft
+
+@Composable
+fun WorkoutScreen(
+    viewModel: FithubViewModel,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val activeWorkout by viewModel.activeWorkout.collectAsState()
+    val unitSystem by viewModel.unitSystem.collectAsState()
+
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        hasLocationPermission = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+    }
+
+    // Location Tracker instance for running/walking
+    val locationTracker = remember {
+        LocationTracker(context) { dist, speed, _ ->
+            viewModel.updateGpsDistance(dist, speed)
+        }
+    }
+
+    // Jump detector instance for jumping
+    val jumpDetector = remember {
+        JumpDetector(context) { count ->
+            viewModel.updateJumpCount(count)
+        }
+    }
+
+    // Start / stop hardware sensors based on workout state
+    LaunchedEffect(activeWorkout.isActive, activeWorkout.isPaused, activeWorkout.type) {
+        if (activeWorkout.isActive) {
+            when (activeWorkout.type) {
+                "RUNNING", "WALKING" -> {
+                    if (!hasLocationPermission) {
+                        permissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    }
+                    if (activeWorkout.isPaused) {
+                        locationTracker.pause()
+                    } else {
+                        val mode = if (activeWorkout.type == "RUNNING") DistanceCalculator.ActivityMode.RUNNING else DistanceCalculator.ActivityMode.WALKING
+                        locationTracker.startTracking(mode, activeWorkout.distanceMeters)
+                    }
+                }
+                "JUMPING" -> {
+                    if (!activeWorkout.isPaused) {
+                        jumpDetector.start(activeWorkout.jumpCount)
+                    } else {
+                        jumpDetector.stop()
+                    }
+                }
+            }
+        } else {
+            locationTracker.stopTracking()
+            jumpDetector.stop()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            locationTracker.stopTracking()
+            jumpDetector.stop()
+        }
+    }
+
+    if (!activeWorkout.isActive) {
+        // Idle Screen: Choose modality to start
+        WorkoutIdleView(
+            viewModel = viewModel,
+            modifier = modifier
+        )
+    } else {
+        // Active Session Screen
+        ActiveSessionView(
+            viewModel = viewModel,
+            activeWorkout = activeWorkout,
+            jumpDetector = jumpDetector,
+            unitSystem = unitSystem,
+            modifier = modifier
+        )
+    }
+}
+
+@Composable
+fun WorkoutIdleView(
+    viewModel: FithubViewModel,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp)
+    ) {
+        item {
+            Text(
+                text = viewModel.str(StringKey.NAV_WORKOUT),
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Select an activity to begin tracking.",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+        }
+
+        val modalities = listOf(
+            Triple("RUNNING", StringKey.WORKOUT_RUNNING, Icons.Default.DirectionsRun),
+            Triple("WALKING", StringKey.WORKOUT_WALKING, Icons.Default.DirectionsWalk),
+            Triple("JUMPING", StringKey.WORKOUT_JUMPING, Icons.Default.VerticalAlignTop),
+            Triple("WEIGHTLIFTING", StringKey.WORKOUT_WEIGHTLIFTING, Icons.Default.FitnessCenter)
+        )
+
+        items(modalities) { (type, stringKey, icon) ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .testTag("workout_card_$type"),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(CircleShape)
+                                .background(LimeAccent.copy(alpha = 0.18f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = type,
+                                tint = LimeAccent,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = viewModel.str(stringKey),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = when (type) {
+                                    "RUNNING" -> "GPS pace, distance & calories"
+                                    "WALKING" -> "Pace, distance & calories"
+                                    "JUMPING" -> "Sensor jump counter & cadence"
+                                    else -> "Exercise sets, volume & rest timer"
+                                },
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Button(
+                        onClick = { viewModel.startWorkout(type) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LimeAccent,
+                            contentColor = CharcoalBackground
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
+                        modifier = Modifier.testTag("start_workout_button_$type")
+                    ) {
+                        Text(
+                            text = viewModel.str(StringKey.SESSION_START),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ActiveSessionView(
+    viewModel: FithubViewModel,
+    activeWorkout: com.example.ui.viewmodel.ActiveWorkoutUiState,
+    jumpDetector: JumpDetector,
+    unitSystem: FormatUtils.UnitSystem,
+    modifier: Modifier = Modifier
+) {
+    var showCalibrateDialog by remember { mutableStateOf(false) }
+
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(top = 20.dp, bottom = 100.dp)
+    ) {
+        // Session Header
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = when (activeWorkout.type) {
+                            "RUNNING" -> viewModel.str(StringKey.WORKOUT_RUNNING)
+                            "WALKING" -> viewModel.str(StringKey.WORKOUT_WALKING)
+                            "JUMPING" -> viewModel.str(StringKey.WORKOUT_JUMPING)
+                            else -> viewModel.str(StringKey.WORKOUT_WEIGHTLIFTING)
+                        },
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                    Text(
+                        text = if (activeWorkout.isPaused) "Paused" else "In Progress",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = if (activeWorkout.isPaused) WarningAmber else LimeAccent,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
+
+                // Active Timer
+                Text(
+                    text = FormatUtils.formatDuration(activeWorkout.elapsedSeconds),
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Black,
+                        color = LimeAccent
+                    )
+                )
+            }
+        }
+
+        // Rest timer alert if active
+        if (activeWorkout.isRestTimerActive) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(LimeAccent))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Timer,
+                                contentDescription = "Rest",
+                                tint = LimeAccent
+                            )
+                            Text(
+                                text = "${viewModel.str(StringKey.REST_TIMER)}: ${activeWorkout.restTimerRemainingSeconds}s",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        }
+
+                        Button(
+                            onClick = { viewModel.skipRestTimer() },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondary,
+                                contentColor = MaterialTheme.colorScheme.onSecondary
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(viewModel.str(StringKey.SKIP_REST))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Modality-specific displays
+        when (activeWorkout.type) {
+            "RUNNING", "WALKING" -> {
+                item {
+                    val pace = PaceCalculator.calculatePaceSecondsPerKm(
+                        activeWorkout.distanceMeters,
+                        activeWorkout.elapsedSeconds
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        StatCard(
+                            title = viewModel.str(StringKey.DISTANCE_COVERED),
+                            value = FormatUtils.formatDistance(activeWorkout.distanceMeters, unitSystem),
+                            icon = Icons.Default.Navigation,
+                            testTag = "active_distance",
+                            modifier = Modifier.weight(1f)
+                        )
+                        StatCard(
+                            title = viewModel.str(StringKey.AVG_PACE),
+                            value = FormatUtils.formatPace(pace, unitSystem),
+                            icon = Icons.Default.Speed,
+                            testTag = "active_pace",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                item {
+                    StatCard(
+                        title = viewModel.str(StringKey.CALORIES_BURNED),
+                        value = FormatUtils.formatCalories(activeWorkout.caloriesBurned),
+                        icon = Icons.Default.LocalFireDepartment,
+                        testTag = "active_calories",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            "JUMPING" -> {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(28.dp))
+                            .testTag("jump_counter_card"),
+                        colors = CardDefaults.cardColors(containerColor = LimeAccent)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = viewModel.str(StringKey.JUMP_COUNT),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = CharcoalBackground
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "${activeWorkout.jumpCount}",
+                                style = MaterialTheme.typography.headlineLarge.copy(
+                                    fontSize = 64.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = CharcoalBackground
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                FilledIconButton(
+                                    onClick = { jumpDetector.manualDecrement() },
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = CharcoalBackground,
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Minus 1")
+                                }
+
+                                FilledIconButton(
+                                    onClick = { jumpDetector.manualIncrement() },
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = CharcoalBackground,
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = "Plus 1")
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        jumpDetector.startCalibration()
+                                        showCalibrateDialog = true
+                                    },
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = CharcoalBackground
+                                    )
+                                ) {
+                                    Text(
+                                        text = viewModel.str(StringKey.CALIBRATE_JUMP),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    StatCard(
+                        title = viewModel.str(StringKey.CALORIES_BURNED),
+                        value = FormatUtils.formatCalories(activeWorkout.caloriesBurned),
+                        icon = Icons.Default.LocalFireDepartment,
+                        testTag = "jump_calories",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            "WEIGHTLIFTING" -> {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        val totalVolume = activeWorkout.exercises.sumOf { ex ->
+                            ex.sets.filter { it.completed }.sumOf { it.reps * it.weightKg }
+                        }
+                        val totalReps = activeWorkout.exercises.sumOf { ex ->
+                            ex.sets.filter { it.completed }.sumOf { it.reps }
+                        }
+
+                        StatCard(
+                            title = viewModel.str(StringKey.VOLUME_TONNAGE),
+                            value = "${totalVolume.toInt()} kg",
+                            icon = Icons.Default.FitnessCenter,
+                            testTag = "lifting_volume",
+                            modifier = Modifier.weight(1f)
+                        )
+                        StatCard(
+                            title = viewModel.str(StringKey.REPS),
+                            value = "$totalReps",
+                            icon = Icons.Default.Repeat,
+                            testTag = "lifting_reps",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                // Exercises & Sets
+                items(activeWorkout.exercises) { exercise ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp)),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "${exercise.name} (${exercise.muscleGroup})",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            exercise.sets.forEach { setDraft ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "${viewModel.str(StringKey.SET)} ${setDraft.setIndex}: ${setDraft.reps} reps x ${setDraft.weightKg} kg",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+
+                                    Checkbox(
+                                        checked = setDraft.completed,
+                                        onCheckedChange = {
+                                            viewModel.toggleSetCompleted(exercise.id, setDraft.setIndex)
+                                        },
+                                        colors = CheckboxDefaults.colors(
+                                            checkedColor = LimeAccent,
+                                            checkmarkColor = CharcoalBackground
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Global Session Controls
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (activeWorkout.isPaused) {
+                    Button(
+                        onClick = { viewModel.resumeWorkout() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LimeAccent,
+                            contentColor = CharcoalBackground
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("button_resume_workout")
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = "Resume")
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(viewModel.str(StringKey.SESSION_RESUME), fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    Button(
+                        onClick = { viewModel.pauseWorkout() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = WarningAmber,
+                            contentColor = CharcoalBackground
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("button_pause_workout")
+                    ) {
+                        Icon(Icons.Default.Pause, contentDescription = "Pause")
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(viewModel.str(StringKey.SESSION_PAUSE), fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Button(
+                    onClick = { viewModel.finishWorkout() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = LimeAccent,
+                        contentColor = CharcoalBackground
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("button_finish_workout")
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = "Finish")
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(viewModel.str(StringKey.SESSION_FINISH), fontWeight = FontWeight.Bold)
+                }
+
+                IconButton(
+                    onClick = { viewModel.cancelWorkout() },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .testTag("button_cancel_workout")
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Cancel",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+
+    if (showCalibrateDialog) {
+        ModalBottomSheet(
+            onDismissRequest = { showCalibrateDialog = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = {
+                BottomSheetDefaults.DragHandle(color = LimeAccent.copy(alpha = 0.6f))
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = viewModel.str(StringKey.CALIBRATE_JUMP),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                    IconButton(onClick = { showCalibrateDialog = false }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+
+                Text(
+                    text = viewModel.str(StringKey.TEST_JUMPS_REMAINING),
+                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Box(modifier = Modifier.padding(20.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Remaining Jumps: ${jumpDetector.calibrationJumpsRemaining}",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                color = LimeAccent,
+                                fontWeight = FontWeight.Black
+                            )
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = { showCalibrateDialog = false },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = LimeAccent,
+                        contentColor = CharcoalBackground
+                    ),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Done", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
