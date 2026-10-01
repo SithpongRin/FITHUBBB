@@ -65,9 +65,21 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
     private val appPrefs = application.getSharedPreferences("fithub_app_settings", Context.MODE_PRIVATE)
 
     val currentTab = MutableStateFlow(ScreenTab.HOME)
-    val appLanguage = MutableStateFlow(AppLanguage.ENGLISH)
+    val appLanguage = MutableStateFlow(
+        if (appPrefs.getString("app_language", "km") == "en") AppLanguage.ENGLISH else AppLanguage.KHMER
+    )
     val isDarkMode = MutableStateFlow(appPrefs.getBoolean("is_dark_mode", true))
     val unitSystem = MutableStateFlow(FormatUtils.UnitSystem.METRIC)
+
+    fun setLanguage(language: AppLanguage) {
+        appLanguage.value = language
+        appPrefs.edit().putString("app_language", language.code).apply()
+    }
+
+    fun toggleLanguage() {
+        val next = if (appLanguage.value == AppLanguage.KHMER) AppLanguage.ENGLISH else AppLanguage.KHMER
+        setLanguage(next)
+    }
 
     fun toggleDarkMode() {
         val newMode = !isDarkMode.value
@@ -81,18 +93,23 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     // Step Tracking (Automatic Background Hardware Sensor with User ON/OFF Control)
+    private var lastStepDbWriteTime = 0L
     val stepTracker = DailyStepTracker(application) { steps, distance, calories ->
-        viewModelScope.launch {
-            val today = LocalDate.now().toString()
-            repository.saveDailySteps(
-                DailyStepsEntity(
-                    localDate = today,
-                    stepCount = steps,
-                    goalSteps = 8000,
-                    distanceMeters = distance,
-                    caloriesBurned = calories
+        val now = System.currentTimeMillis()
+        if (now - lastStepDbWriteTime > 5000L) {
+            lastStepDbWriteTime = now
+            viewModelScope.launch {
+                val today = LocalDate.now().toString()
+                repository.saveDailySteps(
+                    DailyStepsEntity(
+                        localDate = today,
+                        stepCount = steps,
+                        goalSteps = 8000,
+                        distanceMeters = distance,
+                        caloriesBurned = calories
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -175,6 +192,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
 
     // Account & Cloud Sync State
     private val accountManager = com.example.account.AccountManager(application)
+    val isAuthenticated: StateFlow<Boolean> = accountManager.isAuthenticated
     val currentAccount: StateFlow<com.example.account.UserAccount> = accountManager.currentAccount
     val syncStatus: StateFlow<com.example.account.SyncStatus> = accountManager.syncStatus
 
@@ -255,6 +273,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
             exercises = defaultExercises
         )
         currentTab.value = ScreenTab.WORKOUT
+        com.example.services.WorkoutForegroundService.startService(getApplication(), type)
         startTimerLoop()
     }
 
@@ -288,6 +307,17 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
                         caloriesBurned = calories
                     )
 
+                    // Live update ongoing notification in phone's notification bar
+                    com.example.services.WorkoutForegroundService.updateMetrics(
+                        getApplication(),
+                        current.type,
+                        newSeconds,
+                        calories,
+                        current.distanceMeters,
+                        current.jumpCount,
+                        isPaused = false
+                    )
+
                     // Periodically persist active session
                     if (newSeconds % 5 == 0L) {
                         repository.saveActiveSession(
@@ -309,10 +339,12 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
 
     fun pauseWorkout() {
         activeWorkout.value = activeWorkout.value.copy(isPaused = true)
+        com.example.services.WorkoutForegroundService.pauseService(getApplication())
     }
 
     fun resumeWorkout() {
         activeWorkout.value = activeWorkout.value.copy(isPaused = false)
+        com.example.services.WorkoutForegroundService.resumeService(getApplication())
     }
 
     fun updateGpsDistance(distanceMeters: Double, speedMps: Double) {
@@ -435,6 +467,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
             repository.saveWorkout(workout, exerciseEntities, setEntities)
             repository.clearActiveSession()
 
+            com.example.services.WorkoutForegroundService.stopService(getApplication())
             activeWorkout.value = ActiveWorkoutUiState()
             currentTab.value = ScreenTab.HOME
         }
@@ -443,6 +476,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
     fun cancelWorkout() {
         workoutTimerJob?.cancel()
         restTimerJob?.cancel()
+        com.example.services.WorkoutForegroundService.stopService(getApplication())
         viewModelScope.launch {
             repository.clearActiveSession()
             activeWorkout.value = ActiveWorkoutUiState()
@@ -574,6 +608,20 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun deleteSchedule(schedule: WorkoutScheduleEntity) {
+        viewModelScope.launch {
+            NotificationHelper.cancelReminder(getApplication(), schedule.id)
+            repository.deleteSchedule(schedule)
+        }
+    }
+
+    fun sendTestNotification(
+        title: String = "សាកល្បង Notification (FITHUB)",
+        message: String = "ការជូនដំណឹងរបស់ FITHUB ដំណើរការបានយ៉ាងល្អឥតខ្ចោះលើទូរសព្ទរបស់អ្នក!"
+    ) {
+        NotificationHelper.sendNotificationNow(getApplication(), title, message)
+    }
+
     // Profile actions
     fun updateProfile(
         name: String,
@@ -647,14 +695,25 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun signInWithGoogle(onDone: (Boolean, String?) -> Unit) {
+    fun signInWithGoogle(name: String? = null, email: String? = null, photoUrl: String? = null, onDone: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
-            val res = accountManager.signInWithGoogle()
+            val res = accountManager.signInWithGoogle(name, email, photoUrl)
             onDone(res.isSuccess, res.errorMessage)
             if (res.isSuccess) {
+                val current = profile.value ?: com.example.data.ProfileEntity()
+                val finalName = res.account?.displayName ?: name ?: "Athlete"
+                repository.updateProfile(current.copy(fullName = finalName))
                 accountManager.performCloudSync(repository)
             }
         }
+    }
+
+    fun updateProfilePhoto(photoUrl: String) {
+        accountManager.updateProfilePhoto(photoUrl)
+    }
+
+    fun continueAsGuest() {
+        accountManager.continueAsGuest()
     }
 
     fun signOutAccount() {

@@ -12,11 +12,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import coil.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,61 +63,72 @@ fun HomeScreen(
     val unitSystem by viewModel.unitSystem.collectAsState()
     val currentAccount by viewModel.currentAccount.collectAsState()
 
-    // Calculations
-    val totalSecondsToday = todaysWorkouts.sumOf { it.durationSeconds }
-    val totalCaloriesToday = todaysWorkouts.sumOf { it.caloriesBurned }
-    val totalDistanceToday = todaysWorkouts.sumOf { it.distanceMeters }
+    // Calculations cached with remember to maximize scrolling and animation smoothness
+    val totalSecondsToday = remember(todaysWorkouts) { todaysWorkouts.sumOf { it.durationSeconds } }
+    val totalCaloriesToday = remember(todaysWorkouts) { todaysWorkouts.sumOf { it.caloriesBurned } }
+    val totalDistanceToday = remember(todaysWorkouts) { todaysWorkouts.sumOf { it.distanceMeters } }
     val workoutCountToday = todaysWorkouts.size
 
-    // Workout Streak Calculation
-    val workoutDates = allWorkouts.mapNotNull {
-        try {
-            LocalDate.parse(it.localDate)
-        } catch (_: Exception) {
-            null
+    // Workout Streak Calculation cached with remember
+    val streakResult = remember(allWorkouts) {
+        val workoutDates = allWorkouts.mapNotNull {
+            try {
+                LocalDate.parse(it.localDate)
+            } catch (_: Exception) {
+                null
+            }
+        }.toSet()
+        StreakCalculator.calculateStreak(workoutDates)
+    }
+
+    // BMR & Nutrition Targets cached with remember
+    val bmr = remember(profile?.weightKg, profile?.heightCm, profile?.age, profile?.biologicalSex) {
+        val safeSex = try {
+            CalorieCalculator.Sex.valueOf(profile?.biologicalSex ?: "MALE")
+        } catch (_: Throwable) {
+            CalorieCalculator.Sex.MALE
         }
-    }.toSet()
-    val streakResult = StreakCalculator.calculateStreak(workoutDates)
-
-    // BMR & Nutrition Targets
-    val safeSex = try {
-        CalorieCalculator.Sex.valueOf(profile?.biologicalSex ?: "MALE")
-    } catch (_: Throwable) {
-        CalorieCalculator.Sex.MALE
-    }
-    val safeActivity = try {
-        CalorieCalculator.ActivityLevel.valueOf(profile?.activityLevel ?: "MODERATE")
-    } catch (_: Throwable) {
-        CalorieCalculator.ActivityLevel.MODERATE
-    }
-    val safeGoal = try {
-        CalorieCalculator.FitnessGoal.valueOf(profile?.fitnessGoal ?: "GENERAL_FITNESS")
-    } catch (_: Throwable) {
-        CalorieCalculator.FitnessGoal.GENERAL_FITNESS
+        CalorieCalculator.calculateBmr(
+            weightKg = profile?.weightKg ?: 70.0,
+            heightCm = profile?.heightCm ?: 175.0,
+            age = profile?.age ?: 25,
+            sex = safeSex
+        )
     }
 
-    val bmr = CalorieCalculator.calculateBmr(
-        weightKg = profile?.weightKg ?: 70.0,
-        heightCm = profile?.heightCm ?: 175.0,
-        age = profile?.age ?: 25,
-        sex = safeSex
-    )
-    val tdee = CalorieCalculator.calculateTdee(
-        bmr = bmr,
-        activityLevel = safeActivity
-    )
-    val targetCalories = CalorieCalculator.calculateTargetCalories(
-        tdee = tdee,
-        goal = safeGoal
-    )
-    val proteinRange = ProteinCalculator.calculateProteinRange(
-        weightKg = profile?.weightKg ?: 70.0,
-        goal = safeGoal
-    )
+    val tdee = remember(bmr, profile?.activityLevel) {
+        val safeActivity = try {
+            CalorieCalculator.ActivityLevel.valueOf(profile?.activityLevel ?: "MODERATE")
+        } catch (_: Throwable) {
+            CalorieCalculator.ActivityLevel.MODERATE
+        }
+        CalorieCalculator.calculateTdee(bmr = bmr, activityLevel = safeActivity)
+    }
 
-    // Nutrition Totals Today
-    val consumedCalories = todaysNutrition.sumOf { it.calories }
-    val consumedProtein = todaysNutrition.sumOf { it.protein }
+    val targetCalories = remember(tdee, profile?.fitnessGoal) {
+        val safeGoal = try {
+            CalorieCalculator.FitnessGoal.valueOf(profile?.fitnessGoal ?: "GENERAL_FITNESS")
+        } catch (_: Throwable) {
+            CalorieCalculator.FitnessGoal.GENERAL_FITNESS
+        }
+        CalorieCalculator.calculateTargetCalories(tdee = tdee, goal = safeGoal)
+    }
+
+    val proteinRange = remember(profile?.weightKg, profile?.fitnessGoal) {
+        val safeGoal = try {
+            CalorieCalculator.FitnessGoal.valueOf(profile?.fitnessGoal ?: "GENERAL_FITNESS")
+        } catch (_: Throwable) {
+            CalorieCalculator.FitnessGoal.GENERAL_FITNESS
+        }
+        ProteinCalculator.calculateProteinRange(
+            weightKg = profile?.weightKg ?: 70.0,
+            goal = safeGoal
+        )
+    }
+
+    // Nutrition Totals Today cached
+    val consumedCalories = remember(todaysNutrition) { todaysNutrition.sumOf { it.calories } }
+    val consumedProtein = remember(todaysNutrition) { todaysNutrition.sumOf { it.protein } }
 
     // Last Sleep Record
     val lastSleep = allSleep.firstOrNull()
@@ -171,13 +185,33 @@ fun HomeScreen(
                 }
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Language Switcher Button (Khmer / English)
+                    Box(
+                        modifier = Modifier
+                            .height(42.dp)
+                            .clip(RoundedCornerShape(21.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { viewModel.toggleLanguage() }
+                            .padding(horizontal = 12.dp)
+                            .testTag("header_language_toggle_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (viewModel.appLanguage.collectAsState().value.code == "km") "ខ្មែរ" else "EN",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = LimeAccent
+                            )
+                        )
+                    }
+
                     // Theme Switch Button (Moon / Sun)
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
+                            .size(42.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { viewModel.toggleDarkMode() }
@@ -188,26 +222,38 @@ fun HomeScreen(
                             imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
                             contentDescription = "Toggle Light/Dark Theme",
                             tint = if (isDarkMode) WarningAmber else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
 
-                    // Profile Button
+                    // Profile Button (with Google Account Picture)
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
+                            .size(42.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable(onClick = onOpenProfile)
                             .testTag("header_profile_button"),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Profile",
-                            tint = LimeAccent,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        val avatarUrl = currentAccount.photoUrl
+                        if (!avatarUrl.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = avatarUrl,
+                                contentDescription = "Google Profile Picture",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Profile",
+                                tint = LimeAccent,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -555,7 +601,7 @@ fun HomeScreen(
 
                     QuickActionButton(
                         title = viewModel.str(StringKey.ACTION_JUMPING),
-                        icon = Icons.Default.VerticalAlignTop,
+                        icon = Icons.Default.Bolt,
                         testTag = "quick_action_jumping",
                         onClick = { viewModel.startWorkout("JUMPING") },
                         modifier = Modifier.weight(1f)

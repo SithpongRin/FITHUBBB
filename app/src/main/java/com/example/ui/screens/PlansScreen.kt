@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,11 +21,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.WorkoutScheduleEntity
+import com.example.localization.AppLanguage
 import com.example.localization.StringKey
 import com.example.ui.theme.CharcoalBackground
 import com.example.ui.theme.LimeAccent
 import com.example.ui.theme.TextMutedDark
 import com.example.ui.viewmodel.FithubViewModel
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +37,8 @@ fun PlansScreen(
 ) {
     val allPlans by viewModel.allPlans.collectAsState()
     val allSchedules by viewModel.allSchedules.collectAsState()
+    val appLanguage by viewModel.appLanguage.collectAsState()
+    val isKm = appLanguage == AppLanguage.KHMER
 
     var showGenerateDialog by remember { mutableStateOf(false) }
     var showAddScheduleDialog by remember { mutableStateOf(false) }
@@ -59,33 +65,55 @@ fun PlansScreen(
                         )
                     )
                     Text(
-                        text = "Routines & weekly scheduling",
+                        text = if (isKm) "កាលវិភាគ និងគម្រោងហាត់ប្រាណ" else "Routines & weekly scheduling",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
-
-                Button(
-                    onClick = { showGenerateDialog = true },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = LimeAccent,
-                        contentColor = CharcoalBackground
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                    modifier = Modifier.testTag("button_generate_plan")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = viewModel.str(StringKey.GENERATE_PLAN),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        maxLines = 1,
-                        softWrap = false
-                    )
+                    // Language Switcher button
+                    Box(
+                        modifier = Modifier
+                            .height(38.dp)
+                            .clip(RoundedCornerShape(19.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { viewModel.toggleLanguage() }
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (isKm) "ខ្មែរ" else "EN",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = LimeAccent
+                            )
+                        )
+                    }
+
+                    Button(
+                        onClick = { showGenerateDialog = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LimeAccent,
+                            contentColor = CharcoalBackground
+                        ),
+                        shape = RoundedCornerShape(14.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier.testTag("button_generate_plan")
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = viewModel.str(StringKey.GENERATE_PLAN),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 }
             }
         }
@@ -97,10 +125,31 @@ fun PlansScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Weekly Reminder Schedules",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = if (isKm) "កាលវិភាគរំលឹកប្រចាំសប្តាហ៍" else "Weekly Reminder Schedules",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    // Test notification badge button
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.sendTestNotification(
+                                if (isKm) "សាកល្បង Notification (FITHUB)" else "Test Notification (FITHUB)",
+                                if (isKm) "ការជូនដំណឹងរបស់ FITHUB ដំណើរការបានយ៉ាងល្អឥតខ្ចោះលើទូរសព្ទរបស់អ្នក!" else "FITHUB notifications are working perfectly on your device!"
+                            )
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.height(28.dp)
+                    ) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(14.dp), tint = LimeAccent)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(if (isKm) "តេស្ត Notif" else "Test Notif", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
 
                 IconButton(
                     onClick = { showAddScheduleDialog = true },
@@ -119,74 +168,188 @@ fun PlansScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    Box(modifier = Modifier.padding(20.dp), contentAlignment = Alignment.Center) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.NotificationsNone,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(36.dp)
+                        )
                         Text(
-                            text = "No scheduled reminders yet. Tap + to set a workout schedule.",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            text = if (isKm) "មិនទាន់មានកាលវិភាគរំលឹកនៅឡើយទេ" else "No scheduled reminders yet",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                        Text(
+                            text = if (isKm) "ចុចសញ្ញា (+) ខាងលើ ដើម្បីកំណត់ម៉ោងរំលឹកហាត់ប្រាណប្រចាំថ្ងៃ" else "Tap (+) above to set a workout routine reminder",
+                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                         )
                     }
                 }
             }
         } else {
             items(allSchedules) { schedule ->
-                val dayNames = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-                val dayLabel = dayNames.getOrElse(schedule.dayOfWeek) { "Day" }
+                val dayNamesKm = listOf("អាទិត្យ", "ច័ន្ទ", "អង្គារ", "ពុធ", "ព្រហស្បតិ៍", "សុក្រ", "សៅរ៍")
+                val dayNamesEn = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+                val dayLabel = if (isKm) dayNamesKm.getOrElse(schedule.dayOfWeek) { "ថ្ងៃ" } else dayNamesEn.getOrElse(schedule.dayOfWeek) { "Day" }
+
+                val (icon, iconBg, typeTitle) = when (schedule.workoutType) {
+                    "RUNNING" -> Triple(Icons.Default.DirectionsRun, Color(0xFF22C55E), if (isKm) "រត់" else "Running")
+                    "WALKING" -> Triple(Icons.Default.DirectionsWalk, Color(0xFF06B6D4), if (isKm) "ដើរ" else "Walking")
+                    "JUMPING" -> Triple(Icons.Default.Bolt, Color(0xFFA855F7), if (isKm) "លោតខ្សែ" else "Jumping")
+                    else -> Triple(Icons.Default.FitnessCenter, Color(0xFFF97316), if (isKm) "លើកទម្ងន់" else "Weightlifting")
+                }
 
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp)),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        .clip(RoundedCornerShape(22.dp))
+                        .border(
+                            1.dp,
+                            if (schedule.enabled) LimeAccent.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                            RoundedCornerShape(22.dp)
+                        ),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(if (schedule.enabled) LimeAccent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Text(
-                                    text = dayLabel,
-                                    style = MaterialTheme.typography.labelLarge.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (schedule.enabled) LimeAccent else TextMutedDark
+                                // Colorful Icon Badge
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(iconBg.copy(alpha = 0.18f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = schedule.workoutType,
+                                        tint = iconBg,
+                                        modifier = Modifier.size(26.dp)
                                     )
+                                }
+
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = typeTitle,
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = dayLabel,
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = LimeAccent
+                                                )
+                                            )
+                                        }
+                                    }
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = schedule.timeString,
+                                            style = MaterialTheme.typography.bodyLarge.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        )
+                                        Text(
+                                            text = if (isKm) "• រំលឹកមុន ${schedule.reminderOffsetMinutes} នាទី" else "• ${schedule.reminderOffsetMinutes}m before",
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            Switch(
+                                checked = schedule.enabled,
+                                onCheckedChange = { viewModel.toggleSchedule(schedule) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = CharcoalBackground,
+                                    checkedTrackColor = LimeAccent
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Bottom Actions on Schedule Card
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    viewModel.sendTestNotification(
+                                        if (isKm) "ដល់ម៉ោងហាត់ប្រាណ: $typeTitle" else "Workout Time: $typeTitle",
+                                        if (isKm) "ដល់ពេលហាត់ប្រាណហើយ! ម៉ោងកំណត់: ${schedule.timeString} សម្រាប់ $dayLabel" else "It's workout time! Scheduled at ${schedule.timeString} for $dayLabel"
+                                    )
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = LimeAccent, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isKm) "សាកល្បង Notif លើកាតនេះ" else "Test Notification",
+                                    style = MaterialTheme.typography.labelMedium.copy(color = LimeAccent, fontWeight = FontWeight.Bold)
                                 )
                             }
 
-                            Column {
-                                Text(
-                                    text = "${schedule.workoutType} at ${schedule.timeString}",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                                )
-                                Text(
-                                    text = "Reminder: ${schedule.reminderOffsetMinutes}m before",
-                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            IconButton(
+                                onClick = { viewModel.deleteSchedule(schedule) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteOutline,
+                                    contentDescription = "Delete Schedule",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
-
-                        Switch(
-                            checked = schedule.enabled,
-                            onCheckedChange = { viewModel.toggleSchedule(schedule) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = CharcoalBackground,
-                                checkedTrackColor = LimeAccent
-                            )
-                        )
                     }
                 }
             }
@@ -195,7 +358,7 @@ fun PlansScreen(
         // Section 2: Saved Workout Plans
         item {
             Text(
-                text = "Structured Routines",
+                text = if (isKm) "គម្រោងហាត់ប្រាណប្រចាំសប្តាហ៍" else "Weekly Workout Routines",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
         }
@@ -204,11 +367,12 @@ fun PlansScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Box(modifier = Modifier.padding(20.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            text = "No saved workout plans. Generate a personalized weekly routine above.",
+                            text = if (isKm) "មិនទាន់មានគម្រោងហាត់ប្រាណទេ។ ចុចប៊ូតុងខាងលើ ដើម្បីឱ្យប្រព័ន្ធបង្កើតគម្រោងហាត់ប្រាណផ្ទាល់ខ្លួនដោយស្វ័យប្រវត្តិ។" else "No saved workout plans. Generate a personalized weekly routine above.",
                             style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                         )
                     }
@@ -219,10 +383,15 @@ fun PlansScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(22.dp)),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        .clip(RoundedCornerShape(20.dp)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Column(modifier = Modifier.padding(18.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -232,25 +401,38 @@ fun PlansScreen(
                                 text = plan.name,
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                             )
-                            IconButton(onClick = { viewModel.deletePlan(plan) }) {
-                                Icon(Icons.Default.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(LimeAccent.copy(alpha = 0.2f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = if (isKm) "${plan.daysPerWeek} ថ្ងៃ/សប្តាហ៍" else "${plan.daysPerWeek} Days/Week",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = LimeAccent
+                                    )
+                                )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = if (isKm) "គោលដៅ៖ ${plan.goal.replace("_", " ")}" else "Goal: ${plan.goal.replace("_", " ")}",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        )
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
                             Text(
-                                text = "${plan.daysPerWeek} days/week",
-                                style = MaterialTheme.typography.bodySmall.copy(color = LimeAccent)
-                            )
-                            Text(
-                                text = "${plan.sessionMinutes} mins",
-                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                text = if (isKm) "~${plan.sessionMinutes} នាទី/ថ្ងៃ" else "~${plan.sessionMinutes} mins/session",
+                                style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                             )
                             Text(
                                 text = plan.equipment.replace("_", " "),
-                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                             )
                         }
                     }
@@ -259,143 +441,12 @@ fun PlansScreen(
         }
     }
 
-    // Generator Dialog (Swipe-down ModalBottomSheet)
-    if (showGenerateDialog) {
-        var planName by remember { mutableStateOf("Full Body Hypertrophy") }
-        var selectedDays by remember { mutableIntStateOf(3) }
-        var selectedDuration by remember { mutableIntStateOf(45) }
-        var selectedEquipment by remember { mutableStateOf("FULL_GYM") }
-        var selectedObjective by remember { mutableStateOf("STRENGTH") }
-
-        ModalBottomSheet(
-            onDismissRequest = { showGenerateDialog = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            dragHandle = {
-                BottomSheetDefaults.DragHandle(color = LimeAccent.copy(alpha = 0.6f))
-            }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = viewModel.str(StringKey.GENERATE_PLAN),
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    )
-                    IconButton(onClick = { showGenerateDialog = false }) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
-                    }
-                }
-
-                OutlinedTextField(
-                    value = planName,
-                    onValueChange = { planName = it },
-                    label = { Text(viewModel.str(StringKey.PLAN_NAME)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${viewModel.str(StringKey.DAYS_PER_WEEK)}: $selectedDays",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        (2..5).forEach { d ->
-                            FilterChip(
-                                selected = selectedDays == d,
-                                onClick = { selectedDays = d },
-                                label = { Text("$d") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = LimeAccent,
-                                    selectedLabelColor = CharcoalBackground
-                                )
-                            )
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${viewModel.str(StringKey.SESSION_DURATION_MINUTES)}: $selectedDuration",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf(30, 45, 60).forEach { mins ->
-                            FilterChip(
-                                selected = selectedDuration == mins,
-                                onClick = { selectedDuration = mins },
-                                label = { Text("$mins") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = LimeAccent,
-                                    selectedLabelColor = CharcoalBackground
-                                )
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { showGenerateDialog = false },
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Cancel", maxLines = 1, softWrap = false)
-                    }
-
-                    Button(
-                        onClick = {
-                            viewModel.createAutoPlan(
-                                planName,
-                                selectedDays,
-                                selectedDuration,
-                                selectedEquipment,
-                                selectedObjective
-                            )
-                            showGenerateDialog = false
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = LimeAccent,
-                            contentColor = CharcoalBackground
-                        ),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(viewModel.str(StringKey.GENERATE_PLAN), fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                    }
-                }
-            }
-        }
-    }
-
-    // Add Schedule Dialog (Swipe-down ModalBottomSheet)
+    // Interactive Add Schedule BottomSheet (NO TYPING - Easy UI with Steppers, Presets & Icons)
     if (showAddScheduleDialog) {
-        var dayIndex by remember { mutableIntStateOf(1) } // Monday
-        var timeStr by remember { mutableStateOf("07:00") }
+        var dayIndex by remember { mutableIntStateOf(1) } // Monday default
+        var selectedHour by remember { mutableIntStateOf(7) }
+        var selectedMinute by remember { mutableIntStateOf(0) }
+        var isPm by remember { mutableStateOf(false) }
         var type by remember { mutableStateOf("RUNNING") }
         var reminderOffset by remember { mutableIntStateOf(15) }
 
@@ -420,77 +471,186 @@ fun PlansScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = viewModel.str(StringKey.SCHEDULE_WORKOUT),
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.Alarm, contentDescription = null, tint = LimeAccent, modifier = Modifier.size(24.dp))
+                        Text(
+                            text = if (isKm) "កំណត់ម៉ោងរំលឹកហាត់ប្រាណ" else "Schedule Workout Reminder",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
                     IconButton(onClick = { showAddScheduleDialog = false }) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
                     }
                 }
 
-                OutlinedTextField(
-                    value = timeStr,
-                    onValueChange = { timeStr = it },
-                    label = { Text("Time (HH:mm)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Text(
-                    text = "Activity Type",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
-                )
-
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                // 1. Interactive Time Picker (Clock Stepper & AM/PM - NO MANUAL TYPING)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        listOf("RUNNING" to "Running", "WALKING" to "Walking").forEach { (t, label) ->
-                            FilterChip(
-                                selected = type == t,
-                                onClick = { type = t },
-                                label = { Text(label, maxLines = 1, softWrap = false) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = LimeAccent,
-                                    selectedLabelColor = CharcoalBackground
-                                ),
-                                modifier = Modifier.weight(1f)
+                        Text(
+                            text = if (isKm) "ជ្រើសរើសម៉ោងហាត់ប្រាណ" else "Pick Workout Time",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        )
+
+                        // Big Stepper Controls
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Hour Stepper
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                IconButton(
+                                    onClick = {
+                                        selectedHour = if (selectedHour >= 12) 1 else selectedHour + 1
+                                    },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Hour Up", tint = LimeAccent)
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surface)
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = String.format(Locale.US, "%02d", selectedHour),
+                                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        selectedHour = if (selectedHour <= 1) 12 else selectedHour - 1
+                                    },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Hour Down", tint = LimeAccent)
+                                }
+                                Text(if (isKm) "ម៉ោង" else "Hour", style = MaterialTheme.typography.labelSmall)
+                            }
+
+                            Text(":", style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold))
+
+                            // Minute Stepper
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                IconButton(
+                                    onClick = {
+                                        selectedMinute = (selectedMinute + 5) % 60
+                                    },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Minute Up", tint = LimeAccent)
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surface)
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = String.format(Locale.US, "%02d", selectedMinute),
+                                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        selectedMinute = if (selectedMinute - 5 < 0) 55 else selectedMinute - 5
+                                    },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Minute Down", tint = LimeAccent)
+                                }
+                                Text(if (isKm) "នាទី" else "Minute", style = MaterialTheme.typography.labelSmall)
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            // AM / PM Selector
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                FilterChip(
+                                    selected = !isPm,
+                                    onClick = { isPm = false },
+                                    label = { Text(if (isKm) "ព្រឹក" else "AM", fontWeight = FontWeight.Bold) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = LimeAccent,
+                                        selectedLabelColor = CharcoalBackground
+                                    )
+                                )
+                                FilterChip(
+                                    selected = isPm,
+                                    onClick = { isPm = true },
+                                    label = { Text(if (isKm) "ល្ងាច" else "PM", fontWeight = FontWeight.Bold) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = LimeAccent,
+                                        selectedLabelColor = CharcoalBackground
+                                    )
+                                )
+                            }
                         }
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        listOf("JUMPING" to "Jumping", "WEIGHTLIFTING" to "Lifting").forEach { (t, label) ->
-                            FilterChip(
-                                selected = type == t,
-                                onClick = { type = t },
-                                label = { Text(label, maxLines = 1, softWrap = false) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = LimeAccent,
-                                    selectedLabelColor = CharcoalBackground
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
+
+                        // Quick Time Presets
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            listOf(
+                                Triple("06:00", 6, false),
+                                Triple("07:00", 7, false),
+                                Triple("12:00", 12, true),
+                                Triple("17:30", 5, true),
+                                Triple("20:00", 8, true)
+                            ).forEach { (label, h, pm) ->
+                                AssistChip(
+                                    onClick = {
+                                        selectedHour = h
+                                        selectedMinute = if (label.contains("30")) 30 else 0
+                                        isPm = pm
+                                    },
+                                    label = { Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                    colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surface)
+                                )
+                            }
                         }
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Notice: ${reminderOffset}m before")
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf(0, 10, 15, 30).forEach { off ->
+                // 2. Day of Week Selection
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = if (isKm) "ជ្រើសរើសថ្ងៃក្នុងសប្តាហ៍" else "Select Day of Week",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        val days = if (isKm) {
+                            listOf(0 to "អាទិត្យ", 1 to "ច័ន្ទ", 2 to "អង្គារ", 3 to "ពុធ", 4 to "ព្រហ", 5 to "សុក្រ", 6 to "សៅរ៍")
+                        } else {
+                            listOf(0 to "Sun", 1 to "Mon", 2 to "Tue", 3 to "Wed", 4 to "Thu", 5 to "Fri", 6 to "Sat")
+                        }
+
+                        days.forEach { (idx, dayName) ->
                             FilterChip(
-                                selected = reminderOffset == off,
-                                onClick = { reminderOffset = off },
-                                label = { Text("${off}m") },
+                                selected = dayIndex == idx,
+                                onClick = { dayIndex = idx },
+                                label = { Text(dayName, fontSize = 10.sp, fontWeight = FontWeight.Bold) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = LimeAccent,
                                     selectedLabelColor = CharcoalBackground
@@ -500,8 +660,92 @@ fun PlansScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                // 3. Activity Type Selection with Icons
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = if (isKm) "ប្រភេទលំហាត់ប្រាណ" else "Activity Type",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                    )
 
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            Triple("RUNNING", if (isKm) "រត់" else "Running", Icons.Default.DirectionsRun),
+                            Triple("WALKING", if (isKm) "ដើរ" else "Walking", Icons.Default.DirectionsWalk)
+                        ).forEach { (t, label, ic) ->
+                            FilterChip(
+                                selected = type == t,
+                                onClick = { type = t },
+                                leadingIcon = { Icon(ic, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                label = { Text(label, fontWeight = FontWeight.Bold) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = LimeAccent,
+                                    selectedLabelColor = CharcoalBackground
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            Triple("JUMPING", if (isKm) "លោតខ្សែ" else "Jumping", Icons.Default.Bolt),
+                            Triple("WEIGHTLIFTING", if (isKm) "លើកទម្ងន់" else "Lifting", Icons.Default.FitnessCenter)
+                        ).forEach { (t, label, ic) ->
+                            FilterChip(
+                                selected = type == t,
+                                onClick = { type = t },
+                                leadingIcon = { Icon(ic, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                label = { Text(label, fontWeight = FontWeight.Bold) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = LimeAccent,
+                                    selectedLabelColor = CharcoalBackground
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                // 4. Reminder Offset (Notice before) - Clean Horizontal Spacing
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = if (isKm) "រំលឹកមុនពេលចាប់ផ្តើម" else "Remind Before Session",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        val offsets = if (isKm) {
+                            listOf(0 to "ចំពេល", 5 to "មុន 5m", 10 to "មុន 10m", 15 to "មុន 15m", 30 to "មុន 30m")
+                        } else {
+                            listOf(0 to "0m", 5 to "5m", 10 to "10m", 15 to "15m", 30 to "30m")
+                        }
+
+                        offsets.forEach { (off, lbl) ->
+                            FilterChip(
+                                selected = reminderOffset == off,
+                                onClick = { reminderOffset = off },
+                                label = { Text(lbl, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = LimeAccent,
+                                    selectedLabelColor = CharcoalBackground
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -511,12 +755,18 @@ fun PlansScreen(
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Cancel", maxLines = 1, softWrap = false)
+                        Text(if (isKm) "បោះបង់" else "Cancel", maxLines = 1, softWrap = false)
                     }
 
                     Button(
                         onClick = {
-                            viewModel.addSchedule(dayIndex, timeStr, type, reminderOffset)
+                            val hour24 = if (isPm) {
+                                if (selectedHour == 12) 12 else selectedHour + 12
+                            } else {
+                                if (selectedHour == 12) 0 else selectedHour
+                            }
+                            val time24 = String.format(Locale.US, "%02d:%02d", hour24, selectedMinute)
+                            viewModel.addSchedule(dayIndex, time24, type, reminderOffset)
                             showAddScheduleDialog = false
                         },
                         colors = ButtonDefaults.buttonColors(
@@ -524,12 +774,106 @@ fun PlansScreen(
                             contentColor = CharcoalBackground
                         ),
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1.5f)
                     ) {
-                        Text("Save Schedule", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (isKm) "រក្សាទុក និងកំណត់រំលឹក" else "Save & Set Reminder", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                     }
                 }
             }
         }
+    }
+
+    // Routine Generator Dialog
+    if (showGenerateDialog) {
+        var daysCount by remember { mutableIntStateOf(4) }
+        var sessionDuration by remember { mutableIntStateOf(45) }
+        var equipment by remember { mutableStateOf("Dumbbells, Pull-up Bar") }
+        var objective by remember { mutableStateOf("Strength & Muscle") }
+
+        AlertDialog(
+            onDismissRequest = { showGenerateDialog = false },
+            title = {
+                Text(
+                    text = if (isKm) "បង្កើតគម្រោងហាត់ប្រាណឆ្លាតវៃ" else "Generate Smart Routine",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(if (isKm) "ជ្រើសរើសចំនួនថ្ងៃហាត់ក្នុងមួយសប្តាហ៍៖" else "Select workout days per week:", style = MaterialTheme.typography.bodySmall)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        listOf(3, 4, 5, 6).forEach { d ->
+                            FilterChip(
+                                selected = daysCount == d,
+                                onClick = { daysCount = d },
+                                label = { Text(if (isKm) "$d ថ្ងៃ" else "$d Days") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = LimeAccent,
+                                    selectedLabelColor = CharcoalBackground
+                                )
+                            )
+                        }
+                    }
+
+                    Text(if (isKm) "រយៈពេលនៃការហាត់ប្រចាំថ្ងៃ៖" else "Daily session duration:", style = MaterialTheme.typography.bodySmall)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        listOf(30, 45, 60).forEach { mins ->
+                            FilterChip(
+                                selected = sessionDuration == mins,
+                                onClick = { sessionDuration = mins },
+                                label = { Text(if (isKm) "$mins នាទី" else "$mins Mins") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = LimeAccent,
+                                    selectedLabelColor = CharcoalBackground
+                                )
+                            )
+                        }
+                    }
+
+                    Text(if (isKm) "គោលដៅចម្បង៖" else "Primary fitness objective:", style = MaterialTheme.typography.bodySmall)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("Strength & Muscle", "Endurance & Fat Loss").forEach { obj ->
+                            FilterChip(
+                                selected = objective == obj,
+                                onClick = { objective = obj },
+                                label = { Text(obj, fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = LimeAccent,
+                                    selectedLabelColor = CharcoalBackground
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.createAutoPlan("Custom Weekly Routine", daysCount, sessionDuration, equipment, objective)
+                        showGenerateDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = LimeAccent, contentColor = CharcoalBackground)
+                ) {
+                    Text(if (isKm) "បង្កើតគម្រោងឥឡូវនេះ" else "Generate Routine", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGenerateDialog = false }) {
+                    Text(if (isKm) "បោះបង់" else "Cancel")
+                }
+            }
+        )
     }
 }

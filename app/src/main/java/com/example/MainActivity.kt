@@ -1,10 +1,14 @@
 package com.example
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -46,110 +50,80 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val isDark by viewModel.isDarkMode.collectAsState()
+            val isAuthenticated by viewModel.isAuthenticated.collectAsState()
             val currentTab by viewModel.currentTab.collectAsState()
             var showSleepDialog by remember { mutableStateOf(false) }
 
-            FithubTheme(darkTheme = isDark) {
-                // BackHandler returns to Home if on a secondary tab
-                BackHandler(enabled = currentTab != ScreenTab.HOME) {
-                    viewModel.currentTab.value = ScreenTab.HOME
+            val notificationPermissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission(),
+                onResult = { _ -> }
+            )
+
+            LaunchedEffect(Unit) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
+            }
 
-                Scaffold(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                    contentWindowInsets = WindowInsets.systemBars
-                ) { innerPadding ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                    ) {
-                        AnimatedContent(
-                            targetState = currentTab,
-                            transitionSpec = {
-                                val forward = targetState.ordinal > initialState.ordinal
-                                if (forward) {
-                                    (slideInHorizontally(
-                                        animationSpec = spring(
-                                            dampingRatio = Spring.DampingRatioNoBouncy,
-                                            stiffness = Spring.StiffnessMediumLow
-                                        ),
-                                        initialOffsetX = { fullWidth -> (fullWidth * 0.22f).toInt() }
-                                    ) + fadeIn(
-                                        animationSpec = tween(220, easing = FastOutSlowInEasing)
-                                    ) + scaleIn(
-                                        initialScale = 0.96f,
-                                        animationSpec = tween(220, easing = FastOutSlowInEasing)
-                                    )).togetherWith(
-                                        slideOutHorizontally(
-                                            animationSpec = tween(200, easing = FastOutLinearInEasing),
-                                            targetOffsetX = { fullWidth -> -(fullWidth * 0.22f).toInt() }
-                                        ) + fadeOut(
-                                            animationSpec = tween(180)
-                                        ) + scaleOut(
-                                            targetScale = 1.04f,
-                                            animationSpec = tween(180)
-                                        )
-                                    )
-                                } else {
-                                    (slideInHorizontally(
-                                        animationSpec = spring(
-                                            dampingRatio = Spring.DampingRatioNoBouncy,
-                                            stiffness = Spring.StiffnessMediumLow
-                                        ),
-                                        initialOffsetX = { fullWidth -> -(fullWidth * 0.22f).toInt() }
-                                    ) + fadeIn(
-                                        animationSpec = tween(220, easing = FastOutSlowInEasing)
-                                    ) + scaleIn(
-                                        initialScale = 0.96f,
-                                        animationSpec = tween(220, easing = FastOutSlowInEasing)
-                                    )).togetherWith(
-                                        slideOutHorizontally(
-                                            animationSpec = tween(200, easing = FastOutLinearInEasing),
-                                            targetOffsetX = { fullWidth -> (fullWidth * 0.22f).toInt() }
-                                        ) + fadeOut(
-                                            animationSpec = tween(180)
-                                        ) + scaleOut(
-                                            targetScale = 1.04f,
-                                            animationSpec = tween(180)
-                                        )
-                                    )
-                                }
-                            },
-                            label = "tab_animated_content"
-                        ) { tab ->
-                            when (tab) {
-                                ScreenTab.HOME -> HomeScreen(
-                                    viewModel = viewModel,
-                                    onOpenSleepDialog = { showSleepDialog = true },
-                                    onOpenProfile = { viewModel.currentTab.value = ScreenTab.PROFILE }
-                                )
-                                ScreenTab.WORKOUT -> WorkoutScreen(viewModel = viewModel)
-                                ScreenTab.PLANS -> PlansScreen(viewModel = viewModel)
-                                ScreenTab.PROGRESS -> ProgressScreen(viewModel = viewModel)
-                                ScreenTab.PROFILE -> ProfileScreen(viewModel = viewModel)
-                                ScreenTab.SETTINGS -> SettingsScreen(viewModel = viewModel)
-                            }
-                        }
-
-                        // Floating Island Nav pinned cleanly above bottom
-                        FloatingBottomNav(
-                            selectedTab = currentTab,
-                            onTabSelected = { viewModel.currentTab.value = it },
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .navigationBarsPadding()
-                                .padding(bottom = 14.dp)
-                        )
+            FithubTheme(darkTheme = isDark) {
+                if (!isAuthenticated) {
+                    AuthGateScreen(viewModel = viewModel)
+                } else {
+                    // BackHandler returns to Home if on a secondary tab
+                    BackHandler(enabled = currentTab != ScreenTab.HOME) {
+                        viewModel.currentTab.value = ScreenTab.HOME
                     }
 
-                    if (showSleepDialog) {
-                        SleepLogDialog(
-                            viewModel = viewModel,
-                            onDismiss = { showSleepDialog = false }
-                        )
+                    Scaffold(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background),
+                        contentWindowInsets = WindowInsets.systemBars
+                    ) { innerPadding ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                        ) {
+                            AnimatedContent(
+                                targetState = currentTab,
+                                transitionSpec = {
+                                    fadeIn(animationSpec = tween(140)) togetherWith
+                                    fadeOut(animationSpec = tween(120))
+                                },
+                                label = "tab_animated_content"
+                            ) { tab ->
+                                when (tab) {
+                                    ScreenTab.HOME -> HomeScreen(
+                                        viewModel = viewModel,
+                                        onOpenSleepDialog = { showSleepDialog = true },
+                                        onOpenProfile = { viewModel.currentTab.value = ScreenTab.PROFILE }
+                                    )
+                                    ScreenTab.WORKOUT -> WorkoutScreen(viewModel = viewModel)
+                                    ScreenTab.PLANS -> PlansScreen(viewModel = viewModel)
+                                    ScreenTab.PROGRESS -> ProgressScreen(viewModel = viewModel)
+                                    ScreenTab.PROFILE -> ProfileScreen(viewModel = viewModel)
+                                    ScreenTab.SETTINGS -> SettingsScreen(viewModel = viewModel)
+                                }
+                            }
+
+                            // Floating Island Nav pinned cleanly above bottom
+                            FloatingBottomNav(
+                                selectedTab = currentTab,
+                                onTabSelected = { viewModel.currentTab.value = it },
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .navigationBarsPadding()
+                                    .padding(bottom = 14.dp)
+                            )
+                        }
+
+                        if (showSleepDialog) {
+                            SleepLogDialog(
+                                viewModel = viewModel,
+                                onDismiss = { showSleepDialog = false }
+                            )
+                        }
                     }
                 }
             }

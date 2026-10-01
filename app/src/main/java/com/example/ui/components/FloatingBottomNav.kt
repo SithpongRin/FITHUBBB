@@ -118,10 +118,7 @@ fun FloatingBottomNav(
                         .scale(scale)
                         .clip(CircleShape)
                         .background(if (isSelected) LimeAccent else Color.Transparent)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
+                        .clickable {
                             onTabSelected(item.tab)
                         }
                         .padding(horizontal = if (isSelected) 14.dp else 10.dp, vertical = 10.dp),

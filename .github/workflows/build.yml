@@ -52,6 +52,12 @@ jobs:
         path: build-release/Fithub.apk
         retention-days: 30
 
+    - name: Clean Old Assets
+      run: |
+        gh release delete-asset latest app-debug.apk -y || true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
@@ -59,11 +65,16 @@ jobs:
       with:
         tag_name: latest
         name: "Fithub Latest APK"
+        make_latest: "true"
         body: |
-          ### FITHUB App Latest Release
-          Automated build for commit: `${{ github.sha }}`.
+          # ⚡ FITHUB App Latest Release
           
-          **Download `Fithub.apk` below to install directly on your phone!**
+          ### 📲 [👉 ចុចទីនេះដើម្បីទាញយក Fithub.apk ដោយផ្ទាល់](https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk)
+          
+          ---
+          **ការណែនាំ៖**
+          * ឯកសារសម្រាប់ដំឡើងលើទូរសព្ទ Android គឺមានតែមួយគត់គឺ **`Fithub.apk`**
+          * មិនបាច់ទាញយកឯកសារ Source code (zip) នោះទេ (វាជាកូដប្រភពស្វ័យប្រវត្តរបស់ GitHub)
         files: build-release/Fithub.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

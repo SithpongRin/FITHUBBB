@@ -166,12 +166,11 @@ fun SettingsScreen(
                     ) {
                         FilterChip(
                             selected = appLanguage == AppLanguage.ENGLISH,
-                            onClick = { viewModel.appLanguage.value = AppLanguage.ENGLISH },
+                            onClick = { viewModel.setLanguage(AppLanguage.ENGLISH) },
                             label = {
                                 Text(
                                     text = "English",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     softWrap = false
                                 )
@@ -185,12 +184,11 @@ fun SettingsScreen(
 
                         FilterChip(
                             selected = appLanguage == AppLanguage.KHMER,
-                            onClick = { viewModel.appLanguage.value = AppLanguage.KHMER },
+                            onClick = { viewModel.setLanguage(AppLanguage.KHMER) },
                             label = {
                                 Text(
                                     text = "ភាសាខ្មែរ",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     softWrap = false
                                 )

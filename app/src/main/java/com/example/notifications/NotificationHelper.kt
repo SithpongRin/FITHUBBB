@@ -1,6 +1,7 @@
 package com.example.notifications
 
 import android.app.AlarmManager
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -36,22 +37,25 @@ class WorkoutReminderReceiver : BroadcastReceiver() {
 
         val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("FITHUB Workout Reminder")
-            .setContentText("Scheduled $workoutType session is starting soon.")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentTitle("ដល់ម៉ោងហាត់ប្រាណហើយ! ($workoutType)")
+            .setContentText("ដល់ពេលសម្រាប់កម្មវិធី $workoutType របស់អ្នកហើយ! ចុចទីនេះដើម្បីចាប់ផ្តើម")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("ដល់ពេលសម្រាប់កម្មវិធី $workoutType របស់អ្នកហើយ! ចុចទីនេះដើម្បីចាប់ផ្តើមហាត់ប្រាណឥឡូវនេះ។"))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
 
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(scheduleId.hashCode(), notification)
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        notificationManager?.notify(scheduleId.hashCode(), notification)
     }
 }
 
 object NotificationHelper {
 
     const val CHANNEL_ID = "fithub_workout_reminders"
-    private const val CHANNEL_NAME = "Workout Reminders"
+    private const val CHANNEL_NAME = "FITHUB Workout Reminders"
     private const val CHANNEL_DESC = "Reminders for scheduled workout routines"
 
     fun createNotificationChannel(context: Context) {
@@ -64,6 +68,8 @@ object NotificationHelper {
                 ).apply {
                     description = CHANNEL_DESC
                     enableVibration(true)
+                    enableLights(true)
+                    lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 }
                 val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
                 manager?.createNotificationChannel(channel)
@@ -71,13 +77,46 @@ object NotificationHelper {
         }
     }
 
-    fun scheduleReminder(context: Context, schedule: WorkoutScheduleEntity) {
+    fun sendNotificationNow(context: Context, title: String, message: String) {
+        createNotificationChannel(context)
+
+        val openIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("navigate_to", "workout")
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            System.currentTimeMillis().toInt(),
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        manager?.notify(System.currentTimeMillis().toInt(), notification)
+    }
+
+    fun scheduleReminder(context: Context, schedule: WorkoutScheduleEntity, notifyConfirmation: Boolean = true) {
         if (!schedule.enabled) {
             cancelReminder(context, schedule.id)
             return
         }
 
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        createNotificationChannel(context)
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
         val parts = schedule.timeString.split(":")
         if (parts.size != 2) return
 
@@ -85,7 +124,6 @@ object NotificationHelper {
         val minute = parts[1].toIntOrNull() ?: return
 
         val calendar = Calendar.getInstance().apply {
-            // Calendar.DAY_OF_WEEK: 1=Sunday..7=Saturday. schedule.dayOfWeek: 0=Sunday..6=Saturday
             set(Calendar.DAY_OF_WEEK, schedule.dayOfWeek + 1)
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
@@ -111,19 +149,35 @@ object NotificationHelper {
         )
 
         try {
-            alarmManager.setRepeating(
+            alarmManager?.setRepeating(
                 AlarmManager.RTC_WAKEUP,
                 calendar.timeInMillis,
                 AlarmManager.INTERVAL_DAY * 7,
                 pendingIntent
             )
         } catch (_: SecurityException) {
-            // Exact alarm permission not granted
+            try {
+                alarmManager?.set(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.timeInMillis,
+                    pendingIntent
+                )
+            } catch (_: Throwable) {}
+        } catch (_: Throwable) {}
+
+        if (notifyConfirmation) {
+            val dayNames = listOf("អាទិត្យ", "ច័ន្ទ", "អង្គារ", "ពុធ", "ព្រហស្បតិ៍", "សុក្រ", "សៅរ៍")
+            val dayName = dayNames.getOrElse(schedule.dayOfWeek) { "ថ្ងៃកំណត់" }
+            sendNotificationNow(
+                context,
+                "🔔 បានកំណត់ម៉ោងរំលឹកហាត់ប្រាណ!",
+                "FITHUB នឹងរំលឹកអ្នករៀងរាល់ថ្ងៃ $dayName នៅម៉ោង ${schedule.timeString} សម្រាប់ ${schedule.workoutType}"
+            )
         }
     }
 
     fun cancelReminder(context: Context, scheduleId: String) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
         val intent = Intent(context, WorkoutReminderReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -131,6 +185,8 @@ object NotificationHelper {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        alarmManager.cancel(pendingIntent)
+        try {
+            alarmManager?.cancel(pendingIntent)
+        } catch (_: Throwable) {}
     }
 }
