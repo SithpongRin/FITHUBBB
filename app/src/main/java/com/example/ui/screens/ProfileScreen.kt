@@ -442,9 +442,9 @@ fun ProfileScreen(
     // Edit Profile Dialog (Swipe-down ModalBottomSheet)
     if (showEditProfileDialog) {
         var nameInput by remember { mutableStateOf(profile?.fullName ?: "") }
-        var ageInput by remember { mutableStateOf((profile?.age ?: 25).toString()) }
-        var heightInput by remember { mutableStateOf((profile?.heightCm ?: 175.0).toInt().toString()) }
-        var weightInput by remember { mutableStateOf((profile?.weightKg ?: 70.0).toString()) }
+        var ageVal by remember { mutableIntStateOf(profile?.age ?: 25) }
+        var heightVal by remember { mutableIntStateOf((profile?.heightCm ?: 175.0).toInt()) }
+        var weightVal by remember { mutableDoubleStateOf(profile?.weightKg ?: 70.0) }
         var sexInput by remember { mutableStateOf(profile?.biologicalSex ?: "MALE") }
         var activityInput by remember { mutableStateOf(profile?.activityLevel ?: "MODERATE") }
         var goalInput by remember { mutableStateOf(profile?.fitnessGoal ?: "GENERAL_FITNESS") }
@@ -487,33 +487,152 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Row(
+                // Interactive Biometric Steppers Card (Zero typing required)
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    OutlinedTextField(
-                        value = ageInput,
-                        onValueChange = { ageInput = it },
-                        label = { Text(viewModel.str(StringKey.AGE)) },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Age Stepper
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = viewModel.str(StringKey.AGE),
+                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
+                                Text(
+                                    text = "$ageVal yrs",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
+                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { if (ageVal > 12) ageVal-- },
+                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Decrease Age", tint = MaterialTheme.colorScheme.onSurface)
+                                }
+                                IconButton(
+                                    onClick = { if (ageVal < 100) ageVal++ },
+                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(LimeAccent)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = "Increase Age", tint = CharcoalBackground)
+                                }
+                            }
+                        }
 
-                    OutlinedTextField(
-                        value = heightInput,
-                        onValueChange = { heightInput = it },
-                        label = { Text("Height (cm)") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
 
-                    OutlinedTextField(
-                        value = weightInput,
-                        onValueChange = { weightInput = it },
-                        label = { Text("Weight (kg)") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
+                        // Height Stepper
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = viewModel.str(StringKey.HEIGHT),
+                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
+                                Text(
+                                    text = "$heightVal cm",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
+                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { if (heightVal > 100) heightVal -= 1 },
+                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Decrease Height", tint = MaterialTheme.colorScheme.onSurface)
+                                }
+                                Button(
+                                    onClick = { if (heightVal > 105) heightVal -= 5 },
+                                    contentPadding = PaddingValues(horizontal = 6.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
+                                    modifier = Modifier.height(34.dp)
+                                ) {
+                                    Text("-5", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Button(
+                                    onClick = { if (heightVal < 235) heightVal += 5 },
+                                    contentPadding = PaddingValues(horizontal = 6.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
+                                    modifier = Modifier.height(34.dp)
+                                ) {
+                                    Text("+5", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                IconButton(
+                                    onClick = { if (heightVal < 240) heightVal += 1 },
+                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(LimeAccent)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = "Increase Height", tint = CharcoalBackground)
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+
+                        // Weight Stepper
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = viewModel.str(StringKey.WEIGHT),
+                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
+                                Text(
+                                    text = String.format(java.util.Locale.US, "%.1f kg", weightVal),
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
+                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { if (weightVal > 30.0) weightVal = (Math.round((weightVal - 0.5) * 10.0)) / 10.0 },
+                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = "Decrease Weight", tint = MaterialTheme.colorScheme.onSurface)
+                                }
+                                Button(
+                                    onClick = { if (weightVal > 32.0) weightVal = (Math.round((weightVal - 2.0) * 10.0)) / 10.0 },
+                                    contentPadding = PaddingValues(horizontal = 6.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
+                                    modifier = Modifier.height(34.dp)
+                                ) {
+                                    Text("-2", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Button(
+                                    onClick = { if (weightVal < 248.0) weightVal = (Math.round((weightVal + 2.0) * 10.0)) / 10.0 },
+                                    contentPadding = PaddingValues(horizontal = 6.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
+                                    modifier = Modifier.height(34.dp)
+                                ) {
+                                    Text("+2", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                IconButton(
+                                    onClick = { if (weightVal < 250.0) weightVal = (Math.round((weightVal + 0.5) * 10.0)) / 10.0 },
+                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(LimeAccent)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = "Increase Weight", tint = CharcoalBackground)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Text("Sex", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium))
@@ -574,16 +693,12 @@ fun ProfileScreen(
 
                     Button(
                         onClick = {
-                            val parsedAge = ageInput.toIntOrNull() ?: 25
-                            val parsedHeight = heightInput.toDoubleOrNull() ?: 175.0
-                            val parsedWeight = weightInput.toDoubleOrNull() ?: 70.0
-
                             viewModel.updateProfile(
                                 name = nameInput.ifBlank { "Athlete" },
-                                age = parsedAge,
+                                age = ageVal,
                                 sex = sexInput,
-                                heightCm = parsedHeight,
-                                weightKg = parsedWeight,
+                                heightCm = heightVal.toDouble(),
+                                weightKg = weightVal,
                                 activityLevel = activityInput,
                                 goal = goalInput
                             )

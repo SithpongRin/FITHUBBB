@@ -340,214 +340,91 @@ fun HomeScreen(
 
 
 
-        // 2. Hero Card: Today's Activity in vibrant lime
-        item {
-            LimeHeroCard(
-                activeTimeFormatted = FormatUtils.formatDuration(totalSecondsToday),
-                workoutCount = workoutCountToday,
+        // 2. Hero Card: Walking & Daily Step Activity (no workout duration, prominent steps & calories with motion)
+        item(key = "hero_walking_activity_card") {
+            WalkingActivityHeroCard(
+                stepCount = todayStepCount,
+                stepGoal = todayStepGoal,
+                caloriesBurned = todayStepCalories,
+                distanceMeters = todayStepDistanceMeters,
                 streakDays = streakResult.currentStreak,
-                completionPercentage = if (workoutCountToday > 0) 1.0f else (totalSecondsToday / 2400f),
-                labelToday = viewModel.str(StringKey.TODAYS_ACTIVITY),
-                labelActiveTime = viewModel.str(StringKey.ACTIVE_TIME),
-                labelStreak = viewModel.str(StringKey.WORKOUT_STREAK),
-                labelWorkouts = viewModel.str(StringKey.WORKOUTS_COUNT)
+                isKm = isKm,
+                isTrackingEnabled = isStepTrackingEnabled
             )
         }
 
-        // 3. Stat Cards: Calories Burned & Distance Covered
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                StatCard(
-                    title = viewModel.str(StringKey.CALORIES_BURNED),
-                    value = FormatUtils.formatCalories(totalCaloriesToday),
-                    icon = Icons.Default.LocalFireDepartment,
-                    testTag = "stat_calories_burned",
-                    modifier = Modifier.weight(1f)
-                )
-
-                StatCard(
-                    title = viewModel.str(StringKey.DISTANCE_COVERED),
-                    value = FormatUtils.formatDistance(totalDistanceToday, unitSystem),
-                    icon = Icons.Default.Navigation,
-                    testTag = "stat_distance_covered",
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // Daily Steps Tracker Card (with user ON / OFF control switch)
-        item {
+        // 3. Daily Steps Sensor Quick Switch
+        item(key = "card_step_sensor_toggle") {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(RoundedCornerShape(20.dp))
                     .testTag("card_daily_steps"),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    // Header with Switch
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isStepTrackingEnabled) LimeAccent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.DirectionsWalk,
-                                    contentDescription = "Steps",
-                                    tint = if (isStepTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-
-                            Column {
-                                Text(
-                                    text = viewModel.str(StringKey.DAILY_STEPS),
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                                )
-                                Text(
-                                    text = if (isStepTrackingEnabled) {
-                                        viewModel.str(StringKey.STEP_TRACKING_ON) + " (Auto 24/7)"
-                                    } else {
-                                        viewModel.str(StringKey.STEP_TRACKING_OFF)
-                                    },
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = if (isStepTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                )
-                            }
-                        }
-
-                        // Prominent ON / OFF Switch (with in-app runtime permission check)
-                        Switch(
-                            checked = isStepTrackingEnabled,
-                            onCheckedChange = { enabled ->
-                                if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
-                                        activityRecognitionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
-                                    } else {
-                                        viewModel.setStepTrackingEnabled(true)
-                                    }
-                                } else {
-                                    viewModel.setStepTrackingEnabled(enabled)
-                                }
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = CharcoalBackground,
-                                checkedTrackColor = LimeAccent
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    if (isStepTrackingEnabled) {
-                        // Big step counter and progress
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            Text(
-                                text = "$todayStepCount",
-                                style = MaterialTheme.typography.headlineLarge.copy(
-                                    fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 32.sp
-                                )
-                            )
-                            val stepUnit = if (isKm) "ជំហាន" else "steps"
-                            Text(
-                                text = "/ $todayStepGoal $stepUnit",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = FontWeight.Medium
-                                ),
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        val progressFraction = if (todayStepGoal > 0) {
-                            (todayStepCount.toFloat() / todayStepGoal.toFloat()).coerceIn(0f, 1f)
-                        } else 0f
-
-                        LinearProgressIndicator(
-                            progress = { progressFraction },
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(CircleShape),
-                            color = LimeAccent,
-                            trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // Distance and Calories Row
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(if (isStepTrackingEnabled) LimeAccent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Navigation,
-                                    contentDescription = "Distance",
-                                    tint = LimeAccent,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = String.format("%.2f km", todayStepDistanceMeters / 1000.0),
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
-                                )
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.LocalFireDepartment,
-                                    contentDescription = "Calories",
-                                    tint = WarningAmber,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = String.format("%.0f kcal", todayStepCalories),
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
-                                )
-                            }
-                        }
-                    } else {
-                        // Paused State Explanation
-                        Text(
-                            text = if (isKm)
-                                "ការរាប់ជំហានត្រូវបានផ្អាក។ សូមបើកកុងតាក់ខាងលើ ដើម្បីរាប់ជំហានប្រចាំថ្ងៃរបស់អ្នក។"
-                            else
-                                "Step tracking is paused. Turn on the switch above to automatically count your daily steps in the background.",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            Icon(
+                                imageVector = Icons.Default.DirectionsWalk,
+                                contentDescription = "Steps",
+                                tint = if (isStepTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
                             )
-                        )
+                        }
+
+                        Column {
+                            Text(
+                                text = viewModel.str(StringKey.DAILY_STEPS),
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Text(
+                                text = if (isStepTrackingEnabled) {
+                                    viewModel.str(StringKey.STEP_TRACKING_ON) + " (Auto 24/7)"
+                                } else {
+                                    viewModel.str(StringKey.STEP_TRACKING_OFF)
+                                },
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = if (isStepTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
                     }
+
+                    Switch(
+                        checked = isStepTrackingEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+                                    activityRecognitionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                                } else {
+                                    viewModel.setStepTrackingEnabled(true)
+                                }
+                            } else {
+                                viewModel.setStepTrackingEnabled(enabled)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = CharcoalBackground,
+                            checkedTrackColor = LimeAccent
+                        )
+                    )
                 }
             }
         }

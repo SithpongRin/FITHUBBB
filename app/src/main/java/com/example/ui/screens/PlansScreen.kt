@@ -5,7 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -548,17 +550,19 @@ fun PlansScreen(
                         }
 
                         // Quick Time Presets
-                        Row(
+                        LazyRow(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            listOf(
-                                Triple("06:00", 6, false),
-                                Triple("07:00", 7, false),
-                                Triple("12:00", 12, true),
-                                Triple("17:30", 5, true),
-                                Triple("20:00", 8, true)
-                            ).forEach { (label, h, pm) ->
+                            items(
+                                listOf(
+                                    Triple("06:00 AM", 6, false),
+                                    Triple("07:00 AM", 7, false),
+                                    Triple("12:00 PM", 12, true),
+                                    Triple("05:30 PM", 5, true),
+                                    Triple("08:00 PM", 8, true)
+                                )
+                            ) { (label, h, pm) ->
                                 AssistChip(
                                     onClick = {
                                         selectedHour = h
@@ -568,6 +572,43 @@ fun PlansScreen(
                                     label = { Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                                     colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surface)
                                 )
+                            }
+                        }
+
+                        // Scrollable Minute Selector (0 to 59)
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = if (isKm) "រំកិលដើម្បីជ្រើសរើសនាទី (ពី ០ ដល់ ៥៩)៖" else "Scroll to pick minute (0 to 59):",
+                                style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+                            val minuteScrollState = rememberLazyListState(initialFirstVisibleItemIndex = (selectedMinute - 2).coerceAtLeast(0))
+                            LazyRow(
+                                state = minuteScrollState,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(60) { minIndex ->
+                                    val isSelected = selectedMinute == minIndex
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = 44.dp, height = 36.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(if (isSelected) LimeAccent else MaterialTheme.colorScheme.surface)
+                                            .clickable { selectedMinute = minIndex },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = String.format(Locale.US, "%02d", minIndex),
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) CharcoalBackground else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -745,59 +786,92 @@ fun PlansScreen(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(if (isKm) "ជ្រើសរើសចំនួនថ្ងៃហាត់ក្នុងមួយសប្តាហ៍៖" else "Select workout days per week:", style = MaterialTheme.typography.bodySmall)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        listOf(3, 4, 5, 6).forEach { d ->
-                            FilterChip(
-                                selected = daysCount == d,
-                                onClick = { daysCount = d },
-                                label = { Text(if (isKm) "$d ថ្ងៃ" else "$d Days") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = LimeAccent,
-                                    selectedLabelColor = CharcoalBackground
-                                )
-                            )
-                        }
-                    }
-
-                    Text(if (isKm) "រយៈពេលនៃការហាត់ប្រចាំថ្ងៃ៖" else "Daily session duration:", style = MaterialTheme.typography.bodySmall)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        listOf(30, 45, 60).forEach { mins ->
-                            FilterChip(
-                                selected = sessionDuration == mins,
-                                onClick = { sessionDuration = mins },
-                                label = { Text(if (isKm) "$mins នាទី" else "$mins Mins") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = LimeAccent,
-                                    selectedLabelColor = CharcoalBackground
-                                )
-                            )
-                        }
-                    }
-
-                    Text(if (isKm) "គោលដៅចម្បង៖" else "Primary fitness objective:", style = MaterialTheme.typography.bodySmall)
-                    Row(
+                    LazyRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf("Strength & Muscle", "Endurance & Fat Loss").forEach { obj ->
+                        items(listOf(3, 4, 5, 6, 7)) { d ->
                             FilterChip(
-                                selected = objective == obj,
-                                onClick = { objective = obj },
-                                label = { Text(obj, fontSize = 11.sp) },
+                                selected = daysCount == d,
+                                onClick = { daysCount = d },
+                                label = { Text(if (isKm) "$d ថ្ងៃ" else "$d Days", fontWeight = FontWeight.SemiBold) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = LimeAccent,
                                     selectedLabelColor = CharcoalBackground
-                                ),
-                                modifier = Modifier.weight(1f)
+                                )
                             )
+                        }
+                    }
+
+                    Text(if (isKm) "គោលដៅចម្បងនៃការហាត់៖" else "Primary fitness objective:", style = MaterialTheme.typography.bodySmall)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "Strength & Muscle" to (if (isKm) "កម្លាំងសាច់ដុំ និងលើកទម្ងន់ (Strength & Muscle)" else "Strength & Muscle (Weightlifting)"),
+                            "Endurance & Fat Loss" to (if (isKm) "ដុតជាតិខ្លាញ់ និងបង្កើនកម្លាំងដង្ហើម (Endurance & Fat Loss)" else "Endurance & Fat Loss (Cardio)")
+                        ).forEach { (obj, title) ->
+                            val isSelected = objective == obj
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { objective = obj },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) LimeAccent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                                ),
+                                border = if (isSelected) CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(LimeAccent)) else null
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = title,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) LimeAccent else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    )
+                                    if (isSelected) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = LimeAccent, modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (objective == "Strength & Muscle") {
+                        Text(
+                            text = if (isKm)
+                                "ការហាត់លើកទម្ងន់ (Lifting) ផ្អែកលើការ Tick បញ្ចប់តាមឈុត និងចលនាជាក់ស្ដែង ដោយមិនបាច់កំណត់នាទីឡើយ។"
+                            else
+                                "Lifting routines are tracked by ticking completed sets & reps without timer limits.",
+                            style = MaterialTheme.typography.bodySmall.copy(color = LimeAccent, fontSize = 11.sp)
+                        )
+                    } else {
+                        Text(if (isKm) "រយៈពេលនៃការហាត់ប្រចាំថ្ងៃ៖" else "Daily session duration:", style = MaterialTheme.typography.bodySmall)
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(listOf(30, 45, 60)) { mins ->
+                                FilterChip(
+                                    selected = sessionDuration == mins,
+                                    onClick = { sessionDuration = mins },
+                                    label = { Text(if (isKm) "$mins នាទី" else "$mins Mins") },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = LimeAccent,
+                                        selectedLabelColor = CharcoalBackground
+                                    )
+                                )
+                            }
                         }
                     }
                 }

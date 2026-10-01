@@ -290,7 +290,10 @@ fun ActiveSessionView(
     unitSystem: FormatUtils.UnitSystem,
     modifier: Modifier = Modifier
 ) {
+    val isKm = viewModel.appLanguage.collectAsState().value.code == "km"
     var showCalibrateDialog by remember { mutableStateOf(false) }
+    var showFinishWorkoutDialog by remember { mutableStateOf(false) }
+    var workoutTitleInput by remember { mutableStateOf("") }
 
     LazyColumn(
         modifier = modifier
@@ -328,14 +331,32 @@ fun ActiveSessionView(
                     )
                 }
 
-                // Active Timer
-                Text(
-                    text = FormatUtils.formatDuration(activeWorkout.elapsedSeconds),
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Black,
-                        color = LimeAccent
+                // Active Timer or Sets Counter for Lifting
+                if (activeWorkout.type == "WEIGHTLIFTING") {
+                    val totalSets = activeWorkout.exercises.sumOf { it.sets.size }
+                    val doneSets = activeWorkout.exercises.sumOf { it.sets.count { s -> s.completed } }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "$doneSets / $totalSets",
+                            style = MaterialTheme.typography.headlineLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                color = LimeAccent
+                            )
+                        )
+                        Text(
+                            text = if (isKm) "ឈុតបាន Tick" else "Sets Done",
+                            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        )
+                    }
+                } else {
+                    Text(
+                        text = FormatUtils.formatDuration(activeWorkout.elapsedSeconds),
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.Black,
+                            color = LimeAccent
+                        )
                     )
-                )
+                }
             }
         }
 
@@ -634,7 +655,16 @@ fun ActiveSessionView(
                 }
 
                 Button(
-                    onClick = { viewModel.finishWorkout() },
+                    onClick = {
+                        workoutTitleInput = when (activeWorkout.type) {
+                            "RUNNING" -> if (isKm) "រត់ពេលព្រឹក" else "Morning Run"
+                            "WALKING" -> if (isKm) "ដើរហាត់ប្រាណ" else "Fitness Walk"
+                            "WEIGHTLIFTING" -> if (isKm) "ហាត់លើកទម្ងន់" else "Weightlifting Session"
+                            "JUMPING" -> if (isKm) "លោតខ្សែដុតខ្លាញ់" else "Jump Rope Cardio"
+                            else -> "Workout Session"
+                        }
+                        showFinishWorkoutDialog = true
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = LimeAccent,
                         contentColor = CharcoalBackground
@@ -665,6 +695,133 @@ fun ActiveSessionView(
                 }
             }
         }
+    }
+
+    // Finish Workout Dialog (Input Title and Save)
+    if (showFinishWorkoutDialog) {
+        val titlePresets = when (activeWorkout.type) {
+            "RUNNING" -> if (isKm) listOf("រត់ពេលព្រឹក", "រត់ពេលល្ងាច", "រត់ដុតខ្លាញ់", "រត់កម្លាំង")
+                         else listOf("Morning Run", "Evening Run", "Fat Burn Run", "Tempo Run")
+            "WALKING" -> if (isKm) listOf("ដើរពេលព្រឹក", "ដើរលំហែ", "ដើរដុតកាឡូរី", "ដើរ ៥០០០ ជំហាន")
+                         else listOf("Morning Walk", "Evening Walk", "Brisk Walk", "Power Walk")
+            "WEIGHTLIFTING" -> if (isKm) listOf("ហាត់ទ្រូង និងដៃ", "ហាត់ខ្នង", "ហាត់ជើង", "ហាត់ស្មា", "ហាត់ពេញខ្លួន")
+                               else listOf("Chest & Triceps", "Back & Biceps", "Leg Day", "Shoulders", "Full Body")
+            "JUMPING" -> if (isKm) listOf("លោតខ្សែដុតខ្លាញ់", "លោត Cardio HIIT", "លោត ៥០០ ដង")
+                         else listOf("Cardio Jump", "HIIT Jump", "500 Jumps")
+            else -> listOf("Daily Workout")
+        }
+
+        AlertDialog(
+            onDismissRequest = { showFinishWorkoutDialog = false },
+            title = {
+                Text(
+                    text = if (isKm) "បញ្ចប់ការហាត់ប្រាណ" else "Finish Workout",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = if (isKm) "កាឡូរី" else "Calories",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
+                                Text(
+                                    text = FormatUtils.formatCalories(activeWorkout.caloriesBurned),
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
+                                )
+                            }
+                            if (activeWorkout.type == "WEIGHTLIFTING") {
+                                val doneSets = activeWorkout.exercises.sumOf { it.sets.count { s -> s.completed } }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = if (isKm) "ឈុតបាន Tick" else "Sets Done",
+                                        style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    )
+                                    Text(
+                                        text = "$doneSets Sets",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
+                                    )
+                                }
+                            } else {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = if (isKm) "រយៈពេល" else "Duration",
+                                        style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    )
+                                    Text(
+                                        text = FormatUtils.formatDuration(activeWorkout.elapsedSeconds),
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = if (isKm) "ដាក់ចំណងជើងការហាត់ប្រាណ៖" else "Workout Title:",
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
+                    )
+
+                    OutlinedTextField(
+                        value = workoutTitleInput,
+                        onValueChange = { workoutTitleInput = it },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text(if (isKm) "បញ្ចូលចំណងជើង..." else "Enter title...") }
+                    )
+
+                    Text(
+                        text = if (isKm) "ជ្រើសរើសចំណងជើងរហ័ស៖" else "Quick title presets:",
+                        style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    )
+
+                    androidx.compose.foundation.lazy.LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(titlePresets) { preset ->
+                            val isSelected = workoutTitleInput == preset
+                            AssistChip(
+                                onClick = { workoutTitleInput = preset },
+                                label = { Text(preset, fontSize = 11.sp) },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = if (isSelected) LimeAccent else MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = if (isSelected) CharcoalBackground else MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.finishWorkout(workoutTitleInput)
+                        showFinishWorkoutDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = LimeAccent, contentColor = CharcoalBackground)
+                ) {
+                    Text(if (isKm) "រក្សាទុក (Save)" else "Save Workout", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFinishWorkoutDialog = false }) {
+                    Text(if (isKm) "បោះបង់" else "Cancel")
+                }
+            }
+        )
     }
 
     if (showCalibrateDialog) {

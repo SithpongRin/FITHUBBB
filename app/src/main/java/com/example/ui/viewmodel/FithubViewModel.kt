@@ -485,7 +485,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
         activeWorkout.value = activeWorkout.value.copy(isRestTimerActive = false, restTimerRemainingSeconds = 0)
     }
 
-    fun finishWorkout() {
+    fun finishWorkout(customTitle: String = "") {
         val current = activeWorkout.value
         if (!current.isActive) return
 
@@ -546,7 +546,8 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
                 jumpCount = current.jumpCount,
                 totalVolumeKg = totalVolume,
                 totalReps = totalReps,
-                localDate = todayDateString
+                localDate = todayDateString,
+                notes = customTitle.ifBlank { current.type }
             )
 
             repository.saveWorkout(workout, exerciseEntities, setEntities)

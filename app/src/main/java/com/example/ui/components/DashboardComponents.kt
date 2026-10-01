@@ -17,10 +17,216 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.animation.core.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
+
+@Composable
+fun WalkingActivityHeroCard(
+    stepCount: Int,
+    stepGoal: Int,
+    caloriesBurned: Double,
+    distanceMeters: Double,
+    streakDays: Int,
+    isKm: Boolean = true,
+    isTrackingEnabled: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse_anim")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_alpha"
+    )
+
+    val progressFraction = if (stepGoal > 0) {
+        (stepCount.toFloat() / stepGoal.toFloat()).coerceIn(0f, 1f)
+    } else 0f
+
+    val animatedProgress by animateFloatAsState(
+        targetValue = progressFraction,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "steps_progress"
+    )
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp))
+            .testTag("hero_today_activity_card"),
+        colors = CardDefaults.cardColors(containerColor = LimeAccent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp)
+        ) {
+            // Header Row: Title + Live Status Badge + Streak
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isTrackingEnabled) CharcoalBackground.copy(alpha = pulseAlpha)
+                                else CharcoalBackground.copy(alpha = 0.3f)
+                            )
+                    )
+                    Text(
+                        text = if (isKm) "ការដើរប្រចាំថ្ងៃ" else "Daily Walking",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = CharcoalBackground,
+                            letterSpacing = 0.5.sp
+                        )
+                    )
+                }
+
+                // Streak Badge
+                Row(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(CharcoalBackground)
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Bolt,
+                        contentDescription = "Streak",
+                        tint = LimeAccent,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "$streakDays ${if (isKm) "ថ្ងៃ" else "Days"}",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Main Metrics: Big Step Count & Percent Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Column {
+                    Text(
+                        text = String.format(java.util.Locale.US, "%,d", stepCount),
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.Black,
+                            fontSize = 38.sp,
+                            color = CharcoalBackground
+                        )
+                    )
+                    Text(
+                        text = "${if (isKm) "គោលដៅ" else "Goal"}: ${String.format(java.util.Locale.US, "%,d", stepGoal)} ${if (isKm) "ជំហាន" else "steps"}",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = CharcoalBackground.copy(alpha = 0.85f),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CharcoalBackground.copy(alpha = 0.15f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "${(animatedProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            color = CharcoalBackground
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Animated Smooth Progress Bar
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .clip(CircleShape),
+                color = CharcoalBackground,
+                trackColor = CharcoalBackground.copy(alpha = 0.2f)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Bottom Sub-metrics: Distance & Calories Burned
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Distance Walked
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DirectionsWalk,
+                        contentDescription = "Distance",
+                        tint = CharcoalBackground,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = String.format(java.util.Locale.US, "%.2f km", distanceMeters / 1000.0),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = CharcoalBackground
+                        )
+                    )
+                }
+
+                // Calories Burned
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocalFireDepartment,
+                        contentDescription = "Calories",
+                        tint = CharcoalBackground,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = String.format(java.util.Locale.US, "%.0f kcal", caloriesBurned),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = CharcoalBackground
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun LimeHeroCard(
@@ -169,17 +375,17 @@ fun StatCard(
 ) {
     Card(
         modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(20.dp))
             .testTag(testTag),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
                     .background(LimeAccent.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
@@ -188,20 +394,20 @@ fun StatCard(
                     imageVector = icon,
                     contentDescription = title,
                     tint = LimeAccent,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleLarge.copy(
+                style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
                 softWrap = false
             )
 
@@ -210,7 +416,8 @@ fun StatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

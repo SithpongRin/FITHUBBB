@@ -105,17 +105,31 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .padding(innerPadding)
                         ) {
-                            when (currentTab) {
-                                ScreenTab.HOME -> HomeScreen(
-                                    viewModel = viewModel,
-                                    onOpenSleepDialog = { showSleepDialog = true },
-                                    onOpenProfile = { viewModel.currentTab.value = ScreenTab.PROFILE }
-                                )
-                                ScreenTab.WORKOUT -> WorkoutScreen(viewModel = viewModel)
-                                ScreenTab.PLANS -> PlansScreen(viewModel = viewModel)
-                                ScreenTab.PROGRESS -> ProgressScreen(viewModel = viewModel)
-                                ScreenTab.PROFILE -> ProfileScreen(viewModel = viewModel)
-                                ScreenTab.SETTINGS -> SettingsScreen(viewModel = viewModel)
+                            AnimatedContent(
+                                targetState = currentTab,
+                                transitionSpec = {
+                                    (fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing)) +
+                                        scaleIn(initialScale = 0.96f, animationSpec = tween(220, easing = FastOutSlowInEasing)))
+                                        .togetherWith(
+                                            fadeOut(animationSpec = tween(180, easing = FastOutLinearInEasing)) +
+                                                scaleOut(targetScale = 1.02f, animationSpec = tween(180, easing = FastOutLinearInEasing))
+                                        )
+                                },
+                                label = "tab_screen_transition",
+                                modifier = Modifier.fillMaxSize()
+                            ) { targetTab ->
+                                when (targetTab) {
+                                    ScreenTab.HOME -> HomeScreen(
+                                        viewModel = viewModel,
+                                        onOpenSleepDialog = { showSleepDialog = true },
+                                        onOpenProfile = { viewModel.currentTab.value = ScreenTab.PROFILE }
+                                    )
+                                    ScreenTab.WORKOUT -> WorkoutScreen(viewModel = viewModel)
+                                    ScreenTab.PLANS -> PlansScreen(viewModel = viewModel)
+                                    ScreenTab.PROGRESS -> ProgressScreen(viewModel = viewModel)
+                                    ScreenTab.PROFILE -> ProfileScreen(viewModel = viewModel)
+                                    ScreenTab.SETTINGS -> SettingsScreen(viewModel = viewModel)
+                                }
                             }
 
                             // Floating Island Nav pinned cleanly above bottom
