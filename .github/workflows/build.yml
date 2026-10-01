@@ -22,26 +22,16 @@ jobs:
       with:
         java-version: '21'
         distribution: 'temurin'
-        cache: gradle
 
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Accept Android SDK Licenses
-      run: |
-        yes | sdkmanager --licenses || true
-
-    - name: Restore or Generate Debug Keystore
+    - name: Setup Keystore and Env
       run: |
         if [ -f debug.keystore.base64 ]; then
-          base64 -d debug.keystore.base64 > debug.keystore || true
+          base64 --decode debug.keystore.base64 > debug.keystore || true
         fi
         if [ ! -f debug.keystore ] || [ ! -s debug.keystore ]; then
-          echo "Generating new debug.keystore with keytool..."
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
         fi
         touch .env
-        ls -la debug.keystore
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
@@ -49,20 +39,14 @@ jobs:
     - name: Build Debug APK
       run: ./gradlew assembleDebug --stacktrace
 
-    - name: Prepare APK for Release
-      run: |
-        mkdir -p build-release
-        cp app/build/outputs/apk/debug/*.apk build-release/FITHUB-latest.apk
-        ls -la build-release/
-
-    - name: Upload APK as Artifact
+    - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: FITHUB-latest-apk
-        path: build-release/FITHUB-latest.apk
+        path: app/build/outputs/apk/debug/*.apk
         retention-days: 30
 
-    - name: Automatically Publish/Update GitHub Release
+    - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       continue-on-error: true
@@ -74,6 +58,6 @@ jobs:
           This APK was built automatically from commit: `${{ github.sha }}`.
           
           **Download the APK file below to install on your Android device!**
-        files: build-release/FITHUB-latest.apk
+        files: app/build/outputs/apk/debug/*.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
