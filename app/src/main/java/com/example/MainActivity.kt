@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.notifications.NotificationHelper
 import com.example.ui.components.FloatingBottomNav
+import com.example.ui.components.InAppUpdateDialogs
 import com.example.ui.components.SleepLogDialog
 import com.example.ui.screens.*
 import com.example.ui.theme.FithubTheme
@@ -63,6 +64,9 @@ class MainActivity : ComponentActivity() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
+                // Auto-check for OTA features and APK updates on launch
+                viewModel.checkForFeatureUpdates(forceSimulate = false)
+                viewModel.checkForUpdates(forceSimulate = false)
             }
 
             FithubTheme(darkTheme = isDark) {
@@ -123,6 +127,9 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+
+                // Global In-App Update Dialogs (OTA features and native APK updates)
+                InAppUpdateDialogs(viewModel = viewModel)
             }
         }
     }
