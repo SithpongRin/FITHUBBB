@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
 import android.content.Context
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -61,6 +64,26 @@ fun AuthGateScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var infoMessage by remember { mutableStateOf<String?>(null) }
     var showGoogleAuthInfoDialog by remember { mutableStateOf(false) }
+
+    val googleAccountPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val selectedEmail = result.data?.getStringExtra(android.accounts.AccountManager.KEY_ACCOUNT_NAME)
+            if (!selectedEmail.isNullOrBlank()) {
+                val cleanEmail = selectedEmail.trim().lowercase()
+                val cleanName = cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() }
+                isLoading = true
+                errorMessage = null
+                viewModel.signInWithGoogle(name = cleanName, email = cleanEmail) { success, err ->
+                    isLoading = false
+                    if (!success) {
+                        errorMessage = err
+                    }
+                }
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -473,10 +496,37 @@ fun AuthGateScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Google Authentication Button
+                    // Google Authentication Button (Native System Google Account Chooser)
                     OutlinedButton(
                         onClick = {
-                            showGoogleAuthInfoDialog = true
+                            try {
+                                val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                    android.accounts.AccountManager.newChooseAccountIntent(
+                                        null,
+                                        null,
+                                        arrayOf("com.google"),
+                                        null,
+                                        null,
+                                        null,
+                                        null
+                                    )
+                                } else {
+                                    @Suppress("DEPRECATION")
+                                    android.accounts.AccountManager.newChooseAccountIntent(
+                                        null,
+                                        null,
+                                        arrayOf("com.google"),
+                                        false,
+                                        null,
+                                        null,
+                                        null,
+                                        null
+                                    )
+                                }
+                                googleAccountPickerLauncher.launch(intent)
+                            } catch (_: Exception) {
+                                showGoogleAuthInfoDialog = true
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
