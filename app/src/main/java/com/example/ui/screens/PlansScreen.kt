@@ -72,48 +72,24 @@ fun PlansScreen(
                     )
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Button(
+                    onClick = { showGenerateDialog = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = LimeAccent,
+                        contentColor = CharcoalBackground
+                    ),
+                    shape = RoundedCornerShape(14.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    modifier = Modifier.testTag("button_generate_plan")
                 ) {
-                    // Language Switcher button
-                    Box(
-                        modifier = Modifier
-                            .height(38.dp)
-                            .clip(RoundedCornerShape(19.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { viewModel.toggleLanguage() }
-                            .padding(horizontal = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (isKm) "ខ្មែរ" else "EN",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = LimeAccent
-                            )
-                        )
-                    }
-
-                    Button(
-                        onClick = { showGenerateDialog = true },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = LimeAccent,
-                            contentColor = CharcoalBackground
-                        ),
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        modifier = Modifier.testTag("button_generate_plan")
-                    ) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = viewModel.str(StringKey.GENERATE_PLAN),
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                    }
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = viewModel.str(StringKey.GENERATE_PLAN),
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             }
         }
@@ -125,36 +101,15 @@ fun PlansScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = if (isKm) "កាលវិភាគរំលឹកប្រចាំសប្តាហ៍" else "Weekly Reminder Schedules",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                    // Test notification badge button
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.sendTestNotification(
-                                if (isKm) "សាកល្បង Notification (FITHUB)" else "Test Notification (FITHUB)",
-                                if (isKm) "ការជូនដំណឹងរបស់ FITHUB ដំណើរការបានយ៉ាងល្អឥតខ្ចោះលើទូរសព្ទរបស់អ្នក!" else "FITHUB notifications are working perfectly on your device!"
-                            )
-                        },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.height(28.dp)
-                    ) {
-                        Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(14.dp), tint = LimeAccent)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isKm) "តេស្ត Notif" else "Test Notif", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
+                Text(
+                    text = if (isKm) "កាលវិភាគរំលឹកប្រចាំសប្តាហ៍" else "Weekly Reminder Schedules",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
 
                 IconButton(
                     onClick = { showAddScheduleDialog = true },
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(38.dp)
                         .clip(CircleShape)
                         .background(LimeAccent.copy(alpha = 0.18f))
                         .testTag("button_add_schedule")
@@ -318,26 +273,9 @@ fun PlansScreen(
                         // Bottom Actions on Schedule Card
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TextButton(
-                                onClick = {
-                                    viewModel.sendTestNotification(
-                                        if (isKm) "ដល់ម៉ោងហាត់ប្រាណ: $typeTitle" else "Workout Time: $typeTitle",
-                                        if (isKm) "ដល់ពេលហាត់ប្រាណហើយ! ម៉ោងកំណត់: ${schedule.timeString} សម្រាប់ $dayLabel" else "It's workout time! Scheduled at ${schedule.timeString} for $dayLabel"
-                                    )
-                                },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = LimeAccent, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (isKm) "សាកល្បង Notif លើកាតនេះ" else "Test Notification",
-                                    style = MaterialTheme.typography.labelMedium.copy(color = LimeAccent, fontWeight = FontWeight.Bold)
-                                )
-                            }
-
                             IconButton(
                                 onClick = { viewModel.deleteSchedule(schedule) },
                                 modifier = Modifier.size(32.dp)
@@ -366,22 +304,6 @@ fun PlansScreen(
                     text = if (isKm) "គម្រោងហាត់ប្រាណប្រចាំសប្តាហ៍" else "Weekly Workout Routines",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
-
-                OutlinedButton(
-                    onClick = { viewModel.checkForFeatureUpdates(false) },
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.height(30.dp)
-                ) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp), tint = LimeAccent)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (isKm) "លំហាត់ថ្មី OTA" else "New OTA Plans",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = LimeAccent
-                    )
-                }
             }
         }
 

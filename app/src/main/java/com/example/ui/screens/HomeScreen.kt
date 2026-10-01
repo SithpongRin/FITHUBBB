@@ -370,64 +370,7 @@ fun HomeScreen(
             }
         }
 
-        // OTA Dynamic Feature Notification Banner (If new features available without APK install)
-        val currentFeatureStatus = dynamicFeatureStatus
-        if (currentFeatureStatus is com.example.updates.DynamicFeatureStatus.UpdateAvailable) {
-            val pack = currentFeatureStatus.pack
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp)),
-                    colors = CardDefaults.cardColors(containerColor = LimeAccent.copy(alpha = 0.15f))
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = LimeAccent)
-                            Text(
-                                text = if (viewModel.appLanguage.collectAsState().value.code == "km")
-                                    "មានមុខងារថ្មីក្នុង App ផ្ទាល់ (OTA Update)"
-                                else
-                                    "New In-App Feature Pack Available!",
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
-                            )
-                        }
-                        Text(
-                            text = if (viewModel.appLanguage.collectAsState().value.code == "km")
-                                "${pack.titleKm} — មិនបាច់ install APK ឡើងវិញទេ!"
-                            else
-                                "${pack.titleEn} — Instant In-App update, no APK reinstall!",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface)
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            Button(
-                                onClick = { viewModel.applyFeatureUpdate(pack) },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = LimeAccent,
-                                    contentColor = CharcoalBackground
-                                ),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text(
-                                    text = if (viewModel.appLanguage.collectAsState().value.code == "km") "បញ្ចូលមុខងារឥឡូវនេះ" else "Apply Features Now",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+
 
         // Recovered Session Card (if any)
         if (recoveredSession != null) {
@@ -486,49 +429,7 @@ fun HomeScreen(
             }
         }
 
-        // Option 2 In-App APK Updater Banners
-        when (val status = updateStatus) {
-            is UpdateStatus.Available -> {
-                item {
-                    UpdateBanner(
-                        version = status.version,
-                        notes = if (viewModel.appLanguage.value.code == "km") status.notesKm else status.notesEn,
-                        buttonText = if (viewModel.appLanguage.value.code == "km") "ទាញយក និងដំឡើង" else "Download & Install",
-                        onUpdateClick = { viewModel.startDownloadUpdate(status) },
-                        onDismissClick = { viewModel.dismissUpdate() }
-                    )
-                }
-            }
-            is UpdateStatus.Downloading -> {
-                item {
-                    UpdateDownloadingBanner(
-                        version = status.version,
-                        progressPercent = status.progressPercent,
-                        downloadedBytes = status.downloadedBytes,
-                        totalBytes = status.totalBytes,
-                        onCancelClick = { viewModel.dismissUpdate() }
-                    )
-                }
-            }
-            is UpdateStatus.ReadyToInstall -> {
-                item {
-                    UpdateReadyBanner(
-                        version = status.version,
-                        onInstallClick = { viewModel.installDownloadedApk(status.apkFile) },
-                        onDismissClick = { viewModel.dismissUpdate() }
-                    )
-                }
-            }
-            is UpdateStatus.PermissionRequired -> {
-                item {
-                    UpdatePermissionBanner(
-                        onGrantClick = { viewModel.requestInstallPermission() },
-                        onDismissClick = { viewModel.dismissUpdate() }
-                    )
-                }
-            }
-            else -> Unit
-        }
+
 
         // 2. Hero Card: Today's Activity in vibrant lime
         item {
