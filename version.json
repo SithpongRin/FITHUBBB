@@ -1,9 +1,9 @@
 {
-  "versionCode": 1,
-  "versionName": "1.0.0",
-  "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/latest/download/FITHUB-latest.apk",
-  "releaseNotesEn": "Official release with Firebase Cloud Sync, offline Room persistence, and live sensor workouts.",
-  "releaseNotesKm": "កំណែផ្លូវការដំបូង ភ្ជាប់ជាមួយ Firebase Cloud Sync, ដំណើរការ Offline និងតាមដានការហាត់ប្រាណ។",
-  "fileSizeBytes": 18450000,
+  "versionCode": 2,
+  "versionName": "1.0.1",
+  "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk",
+  "releaseNotesEn": "New update: 3-2-1 workout countdown, smooth in-app Google Sign-In, and UI enhancements.",
+  "releaseNotesKm": "កំណែថ្មី៖ មុខងាររាប់ថយក្រោយ ៣ ២ ១ មុនហាត់ប្រាណ ផ្ទាំង Google Sign-In រលូន និងកែលម្អ UI។",
+  "fileSizeBytes": 29180000,
   "mandatory": false
 }

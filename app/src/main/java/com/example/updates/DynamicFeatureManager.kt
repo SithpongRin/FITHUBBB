@@ -122,10 +122,12 @@ object DynamicFeatureManager {
         // Try downloading remote features.json if network is reachable
         if (customFeatureUrl.isNotBlank() && customFeatureUrl.startsWith("http")) {
             try {
-                val url = URL(customFeatureUrl)
+                val checkUrl = if (customFeatureUrl.contains("?")) "$customFeatureUrl&_t=${System.currentTimeMillis()}" else "$customFeatureUrl?_t=${System.currentTimeMillis()}"
+                val url = URL(checkUrl)
                 val conn = url.openConnection() as HttpURLConnection
                 conn.connectTimeout = 8000
                 conn.readTimeout = 8000
+                conn.useCaches = false
                 if (conn.responseCode == HttpURLConnection.HTTP_OK) {
                     val reader = BufferedReader(InputStreamReader(conn.inputStream))
                     val jsonStr = reader.readText()

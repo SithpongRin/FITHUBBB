@@ -71,10 +71,12 @@ object UpdateManager {
 
         if (customUpdateUrl.isNotBlank() && customUpdateUrl.startsWith("http")) {
             try {
-                val url = URL(customUpdateUrl)
+                val checkUrl = if (customUpdateUrl.contains("?")) "$customUpdateUrl&_t=${System.currentTimeMillis()}" else "$customUpdateUrl?_t=${System.currentTimeMillis()}"
+                val url = URL(checkUrl)
                 val conn = url.openConnection() as HttpURLConnection
                 conn.connectTimeout = 8000
                 conn.readTimeout = 8000
+                conn.useCaches = false
                 if (conn.responseCode == HttpURLConnection.HTTP_OK) {
                     val reader = BufferedReader(InputStreamReader(conn.inputStream))
                     val jsonStr = reader.readText()
@@ -88,7 +90,13 @@ object UpdateManager {
                     val apkUrl = json.optString("apkUrl", "")
                     val size = json.optLong("fileSizeBytes", 18_450_000L)
 
-                    if (remoteVersionCode > CURRENT_VERSION_CODE) {
+                    val currentInstalledCode = try {
+                        com.example.BuildConfig.VERSION_CODE
+                    } catch (_: Throwable) {
+                        CURRENT_VERSION_CODE
+                    }
+
+                    if (remoteVersionCode > currentInstalledCode) {
                         _updateStatus.value = UpdateStatus.Available(
                             version = remoteVersionName,
                             versionCode = remoteVersionCode,

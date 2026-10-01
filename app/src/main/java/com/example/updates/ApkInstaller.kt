@@ -65,14 +65,34 @@ object ApkInstaller {
             return@withContext outputFile
         }
 
-        val url = URL(apkUrl)
-        val connection = url.openConnection() as HttpURLConnection
-        connection.connectTimeout = 15000
-        connection.readTimeout = 30000
-        connection.connect()
+        var currentUrl = apkUrl
+        var connection: HttpURLConnection
+        var redirectCount = 0
 
-        if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-            throw Exception("Server returned HTTP ${connection.responseCode}: ${connection.responseMessage}")
+        while (true) {
+            val url = URL(currentUrl)
+            connection = url.openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = true
+            connection.connectTimeout = 15000
+            connection.readTimeout = 30000
+            connection.connect()
+
+            val code = connection.responseCode
+            if (code == HttpURLConnection.HTTP_MOVED_TEMP || code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_SEE_OTHER || code == 307 || code == 308) {
+                val newUrl = connection.getHeaderField("Location")
+                connection.disconnect()
+                if (newUrl != null && redirectCount < 5) {
+                    currentUrl = newUrl
+                    redirectCount++
+                    continue
+                }
+            }
+
+            if (code != HttpURLConnection.HTTP_OK) {
+                connection.disconnect()
+                throw Exception("Server returned HTTP $code: ${connection.responseMessage}")
+            }
+            break
         }
 
         val fileLength = connection.contentLength.toLong()
