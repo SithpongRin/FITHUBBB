@@ -171,7 +171,19 @@ enum class StringKey {
     ACCOUNT_NAME_LABEL,
     ACCOUNT_GOOGLE_SIGNIN,
     ACCOUNT_OFFLINE_DESC,
-    ACCOUNT_SYNCING
+    ACCOUNT_SYNCING,
+    OTA_FEATURES_TITLE,
+    OTA_FEATURES_DESC,
+    OTA_FEATURE_VERSION,
+    OTA_CHECK_BTN,
+    OTA_UPDATE_BTN,
+    OTA_STATUS_APPLIED,
+    OTA_STATUS_CHECKING,
+    OTA_STATUS_UP_TO_DATE,
+    OFFLINE_SYNC_BANNER_ONLINE,
+    OFFLINE_SYNC_BANNER_OFFLINE,
+    OFFLINE_SYNC_BANNER_SYNCING,
+    OFFLINE_SYNC_DESC
 }
 
 object Localization {
@@ -342,7 +354,19 @@ object Localization {
         StringKey.ACCOUNT_NAME_LABEL to "Full Name",
         StringKey.ACCOUNT_GOOGLE_SIGNIN to "Continue with Google",
         StringKey.ACCOUNT_OFFLINE_DESC to "Your workout data is saved safely on your phone and works 100% offline.",
-        StringKey.ACCOUNT_SYNCING to "Syncing with Cloud..."
+        StringKey.ACCOUNT_SYNCING to "Syncing with Cloud...",
+        StringKey.OTA_FEATURES_TITLE to "In-App Feature Updates (OTA)",
+        StringKey.OTA_FEATURES_DESC to "Update workout routines, exercises and nutrition dynamically without reinstalling APK.",
+        StringKey.OTA_FEATURE_VERSION to "Feature Pack Version",
+        StringKey.OTA_CHECK_BTN to "Check for Feature Updates",
+        StringKey.OTA_UPDATE_BTN to "Apply New Features Now",
+        StringKey.OTA_STATUS_APPLIED to "New features installed and ready to use!",
+        StringKey.OTA_STATUS_CHECKING to "Checking for new dynamic features...",
+        StringKey.OTA_STATUS_UP_TO_DATE to "All features are up to date",
+        StringKey.OFFLINE_SYNC_BANNER_ONLINE to "Online • Cloud Synced",
+        StringKey.OFFLINE_SYNC_BANNER_OFFLINE to "Offline Mode • Saved Locally",
+        StringKey.OFFLINE_SYNC_BANNER_SYNCING to "Syncing with Cloud...",
+        StringKey.OFFLINE_SYNC_DESC to "All your workouts, nutrition and progress are always stored on this device."
     )
 
     private val kmStrings: Map<StringKey, String> = mapOf(
@@ -511,7 +535,19 @@ object Localization {
         StringKey.ACCOUNT_NAME_LABEL to "ឈ្មោះពេញ",
         StringKey.ACCOUNT_GOOGLE_SIGNIN to "បន្តជាមួយ Google",
         StringKey.ACCOUNT_OFFLINE_DESC to "ទិន្នន័យរបស់អ្នកត្រូវបានរក្សាទុកលើទូរសព្ទដោយសុវត្ថិភាព និងដំណើរការក្រៅបណ្តាញ ១០០%។",
-        StringKey.ACCOUNT_SYNCING to "កំពុង Sync ជាមួយ Cloud..."
+        StringKey.ACCOUNT_SYNCING to "កំពុង Sync ជាមួយ Cloud...",
+        StringKey.OTA_FEATURES_TITLE to "អាប់ដែតមុខងារថ្មីក្នុង App (OTA)",
+        StringKey.OTA_FEATURES_DESC to "ធ្វើបច្ចុប្បន្នភាពគម្រោងហាត់ លំហាត់ និងមុខងារថ្មីៗក្នុង App ផ្ទាល់ ដោយមិនបាច់ install APK ឡើងវិញ។",
+        StringKey.OTA_FEATURE_VERSION to "កំណែមុខងារក្នុង App (Feature Pack)",
+        StringKey.OTA_CHECK_BTN to "ពិនិត្យមើលមុខងារថ្មីៗ",
+        StringKey.OTA_UPDATE_BTN to "បញ្ចូលមុខងារថ្មីឥឡូវនេះ (Update Now)",
+        StringKey.OTA_STATUS_APPLIED to "មុខងារថ្មីត្រូវបានបញ្ចូលក្នុង App រួចរាល់!",
+        StringKey.OTA_STATUS_CHECKING to "កំពុងស្វែងរកមុខងារថ្មីៗ...",
+        StringKey.OTA_STATUS_UP_TO_DATE to "មុខងារទាំងអស់ស្ថិតក្នុងកំណែចុងក្រោយហើយ",
+        StringKey.OFFLINE_SYNC_BANNER_ONLINE to "អនឡាញ • បាន Sync លើ Cloud",
+        StringKey.OFFLINE_SYNC_BANNER_OFFLINE to "ដំណើរការក្រៅបណ្តាញ • រក្សាទុកក្នុងទូរសព្ទ",
+        StringKey.OFFLINE_SYNC_BANNER_SYNCING to "កំពុង Sync ជាមួយ Cloud...",
+        StringKey.OFFLINE_SYNC_DESC to "ការហាត់ប្រាណ អាហារ និងវឌ្ឍនភាពរបស់អ្នកទាំងអស់ត្រូវបានរក្សាទុកលើទូរសព្ទនេះជានិច្ច។"
     )
 
     fun getString(key: StringKey, language: AppLanguage): String {

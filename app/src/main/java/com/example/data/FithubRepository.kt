@@ -13,6 +13,7 @@ class FithubRepository(private val db: FithubDatabase) {
     val allFoodsFlow: Flow<List<FoodEntity>> = db.foodDao().getAllFoodsFlow()
     val allSleepFlow: Flow<List<SleepEntryEntity>> = db.sleepDao().getAllSleepFlow()
     val activeSessionFlow: Flow<ActiveSessionEntity?> = db.activeSessionDao().getActiveSessionFlow()
+    val allNutritionFlow: Flow<List<NutritionEntryEntity>> = db.nutritionDao().getAllEntriesFlow()
 
     fun getWorkoutsForDateFlow(localDate: String): Flow<List<WorkoutEntity>> =
         db.workoutDao().getWorkoutsForDateFlow(localDate)
@@ -100,6 +101,9 @@ class FithubRepository(private val db: FithubDatabase) {
 
     fun getExercisesForPlanFlow(planId: String): Flow<List<PlanExerciseEntity>> =
         db.planExerciseDao().getExercisesForPlanFlow(planId)
+
+    suspend fun getPlanExercises(planId: String): List<PlanExerciseEntity> =
+        db.planExerciseDao().getExercisesForPlan(planId)
 
     suspend fun deletePlan(plan: WorkoutPlanEntity) {
         db.planExerciseDao().deleteByPlanId(plan.id)

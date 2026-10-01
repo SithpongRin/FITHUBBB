@@ -45,24 +45,30 @@ To execute the unit and calculation test suite:
 gradle :app:testDebugUnitTest
 ```
 
-## GitHub Releases & In-App Auto-Update (Option 2)
+## Offline-First Architecture & Cloud Sync
 
-FITHUB features a built-in direct APK In-App Auto-Updater. To host your own updates on GitHub:
+FITHUB is built offline-first. All workouts, biometric calculations, nutrition tracking, sleep recovery, and customized plans operate 100% locally using Room SQLite:
+- **Offline Mode:** When there is no internet connection, the app remains fully functional. Records are stored locally with zero disruptions.
+- **Online Mode & Auto-Sync:** Integrated with real-time network state monitoring (`NetworkMonitor`). As soon as internet connectivity returns, the app automatically triggers bidirectional cloud sync with Firebase Firestore to backup local changes and download remote updates.
+- **Live Status:** A real-time status banner on the Home dashboard clearly indicates whether the app is currently Cloud Synced, Offline (Saved Locally), or Syncing.
 
-1. **Push to your GitHub repository:**
-   Export from AI Studio or push the repository to your GitHub account (`https://github.com/YOUR_USERNAME/YOUR_REPO`).
+## In-App Over-The-Air (OTA) Feature Updates (No APK Reinstall Needed)
 
-2. **Publish a Release on GitHub:**
-   - Go to your repository on GitHub and click **Releases** -> **Create a new release**.
-   - Create a version tag (e.g., `v1.1.0`).
-   - Attach your built `app-release.apk` file to the release.
-   - Click **Publish release**.
+FITHUB features an instant Over-The-Air (OTA) dynamic feature and content delivery engine (`DynamicFeatureManager`):
+- **Instant Updates Without APK Reinstall:** New workout programs (e.g. Kun Khmer Conditioning, HIIT Metabolic Shredder), new exercise libraries, healthy whole food additions, and fitness challenges can be updated directly inside the app over the air.
+- **How to Push New Features:**
+  1. Edit `features.json` in the root of your repository with new workout routines, exercises, or food items.
+  2. Commit and push `features.json` to GitHub (`https://github.com/YOUR_USERNAME/YOUR_REPO/main/features.json`).
+  3. When users open the app or tap **Check for Feature Updates**, FITHUB downloads the feature pack and imports the new routines and items directly into the local Room database.
+  4. The new features activate immediately without requiring an APK download, Android permissions, or app restart!
 
-3. **Update `version.json`:**
-   - Update `version.json` in the root of your repository with the new `versionCode`, `versionName`, release notes, and the download link:
-     `https://github.com/YOUR_USERNAME/YOUR_REPO/releases/latest/download/app-release.apk`
-   - Point `UpdateManager.customUpdateUrl` to your raw JSON URL:
-     `https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/version.json`
+## GitHub Releases & Core Engine APK Updater (Option 2)
 
-Users will automatically receive the update prompt inside the app, download the APK with live progress, and install it with one tap without losing their local database records.
+For core native binary engine updates (e.g., changes to native Android sensors, core services, or low-level components):
+1. **Publish a Release on GitHub:**
+   - Attach your built `app-release.apk` to a new GitHub Release.
+2. **Update `version.json`:**
+   - Update `version.json` with the new `versionCode`, `versionName`, and APK download link.
+3. Users can download and install the package with live progress directly from the Settings screen.
+
 

@@ -1,0 +1,155 @@
+{
+  "featureCode": 2,
+  "featureVersion": "1.2.0",
+  "releaseDate": "2026-10-01",
+  "titleEn": "Kun Khmer Conditioning & Metabolic HIIT Shredder",
+  "titleKm": "លំហាត់គុនខ្មែរ & កម្មវិធីដុតខ្លាញ់ HIIT កម្រិតខ្ពស់",
+  "descriptionEn": "Over-the-air in-app feature update with authentic Kun Khmer endurance routines, Cambodian healthy whole foods, and high-intensity calisthenics.",
+  "descriptionKm": "អាប់ដែតមុខងារថ្មីក្នុង App ផ្ទាល់៖ កម្មវិធីហាត់ក្បាច់គុនខ្មែរ (Kun Khmer) បញ្ជីអាហារសុខភាពខ្មែរ និងលំហាត់កម្លាំងថ្មីៗ ដោយមិនចាំបាច់ install APK ឡើងវិញ។",
+  "newPlans": [
+    {
+      "id": "plan_kun_khmer_ota",
+      "name": "Kun Khmer Conditioning (លំហាត់គុនខ្មែរ)",
+      "daysPerWeek": 4,
+      "sessionMinutes": 45,
+      "equipment": "BODYWEIGHT",
+      "goal": "ENDURANCE",
+      "exercises": [
+        {
+          "name": "Shadow Boxing & Knee Drives",
+          "sets": 4,
+          "reps": 30,
+          "weightKg": 0.0,
+          "restSeconds": 45,
+          "dayIndex": 0,
+          "orderIndex": 0,
+          "isBodyweight": true
+        },
+        {
+          "name": "Explosive Jump Tuck Squats",
+          "sets": 4,
+          "reps": 15,
+          "weightKg": 0.0,
+          "restSeconds": 60,
+          "dayIndex": 0,
+          "orderIndex": 1,
+          "isBodyweight": true
+        },
+        {
+          "name": "Heavy Bag / High Kick Conditioning",
+          "sets": 5,
+          "reps": 20,
+          "weightKg": 0.0,
+          "restSeconds": 45,
+          "dayIndex": 0,
+          "orderIndex": 2,
+          "isBodyweight": true
+        },
+        {
+          "name": "Plank Knee Tucks & Core Burner",
+          "sets": 3,
+          "reps": 20,
+          "weightKg": 0.0,
+          "restSeconds": 30,
+          "dayIndex": 0,
+          "orderIndex": 3,
+          "isBodyweight": true
+        }
+      ]
+    },
+    {
+      "id": "plan_hiit_shred_ota",
+      "name": "HIIT Metabolic Shredder (ដុតជាតិខ្លាញ់លឿន)",
+      "daysPerWeek": 3,
+      "sessionMinutes": 35,
+      "equipment": "BODYWEIGHT",
+      "goal": "GENERAL_FITNESS",
+      "exercises": [
+        {
+          "name": "Burpee Broad Jumps",
+          "sets": 4,
+          "reps": 12,
+          "weightKg": 0.0,
+          "restSeconds": 45,
+          "dayIndex": 0,
+          "orderIndex": 0,
+          "isBodyweight": true
+        },
+        {
+          "name": "Mountain Climber Sprints",
+          "sets": 4,
+          "reps": 40,
+          "weightKg": 0.0,
+          "restSeconds": 30,
+          "dayIndex": 0,
+          "orderIndex": 1,
+          "isBodyweight": true
+        },
+        {
+          "name": "Speed Jumping Rope",
+          "sets": 4,
+          "reps": 100,
+          "weightKg": 0.0,
+          "restSeconds": 45,
+          "dayIndex": 0,
+          "orderIndex": 2,
+          "isBodyweight": true
+        }
+      ]
+    }
+  ],
+  "newFoods": [
+    {
+      "name": "Cambodian Brown Jasmine Rice (បាយសំរូប)",
+      "servingGrams": 100.0,
+      "caloriesPer100g": 111.0,
+      "proteinPer100g": 2.6,
+      "carbsPer100g": 23.0,
+      "fatPer100g": 0.9
+    },
+    {
+      "name": "Grilled Snakehead Fish (ត្រីរ៉ស់អាំង)",
+      "servingGrams": 100.0,
+      "caloriesPer100g": 98.0,
+      "proteinPer100g": 20.5,
+      "carbsPer100g": 0.0,
+      "fatPer100g": 1.2
+    },
+    {
+      "name": "Steamed Bok Choy (ស្ពៃបូកគោចំហុយ)",
+      "servingGrams": 100.0,
+      "caloriesPer100g": 13.0,
+      "proteinPer100g": 1.5,
+      "carbsPer100g": 2.2,
+      "fatPer100g": 0.2
+    },
+    {
+      "name": "Boiled Morning Glory / Water Spinach (ត្រកួនស្រុះ)",
+      "servingGrams": 100.0,
+      "caloriesPer100g": 19.0,
+      "proteinPer100g": 2.6,
+      "carbsPer100g": 3.1,
+      "fatPer100g": 0.2
+    }
+  ],
+  "newChallenges": [
+    {
+      "id": "ch_100k_steps",
+      "titleEn": "100,000 Monthly Steps",
+      "titleKm": "ប្រកួតដើរ ១០០,០០០ ជំហានប្រចាំខែ",
+      "descriptionEn": "Walk 100k steps this month for cardiovascular conditioning.",
+      "descriptionKm": "ដើរឱ្យបាន ១០០,០០០ ជំហានក្នុងខែនេះ ដើម្បីសុខភាពបេះដូងរឹងមាំ។",
+      "targetValue": 100000.0,
+      "unit": "steps"
+    },
+    {
+      "id": "ch_50k_run",
+      "titleEn": "50km Cumulative Sprint",
+      "titleKm": "ប្រកួតរត់សរុប ៥០ គីឡូម៉ែត្រ",
+      "descriptionEn": "Hit 50km total running distance.",
+      "descriptionKm": "រត់ឱ្យបានចម្ងាយសរុប ៥០ គីឡូម៉ែត្រ។",
+      "targetValue": 50.0,
+      "unit": "km"
+    }
+  ]
+}

@@ -357,10 +357,32 @@ fun PlansScreen(
 
         // Section 2: Saved Workout Plans
         item {
-            Text(
-                text = if (isKm) "គម្រោងហាត់ប្រាណប្រចាំសប្តាហ៍" else "Weekly Workout Routines",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isKm) "គម្រោងហាត់ប្រាណប្រចាំសប្តាហ៍" else "Weekly Workout Routines",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+
+                OutlinedButton(
+                    onClick = { viewModel.checkForFeatureUpdates(false) },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.height(30.dp)
+                ) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp), tint = LimeAccent)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (isKm) "លំហាត់ថ្មី OTA" else "New OTA Plans",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = LimeAccent
+                    )
+                }
+            }
         }
 
         if (allPlans.isEmpty()) {

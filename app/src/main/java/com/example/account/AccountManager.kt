@@ -274,16 +274,32 @@ class AccountManager(private val context: Context) {
         _syncStatus.value = SyncStatus.OfflineMode(0)
     }
 
+    val networkMonitor = com.example.network.NetworkMonitor(context)
+
     suspend fun performCloudSync(repository: FithubRepository) = withContext(Dispatchers.IO) {
         val account = _currentAccount.value
+        val isNetworkAvailable = networkMonitor.isCurrentlyOnline()
+
         if (!account.isOnline) {
-            _syncStatus.value = SyncStatus.OfflineMode(0)
+            _syncStatus.value = SyncStatus.OfflineMode(
+                localItemsCount = 0,
+                hasInternet = isNetworkAvailable
+            )
+            return@withContext
+        }
+
+        if (!isNetworkAvailable) {
+            _syncStatus.value = SyncStatus.OfflineMode(
+                localItemsCount = 0,
+                hasInternet = false
+            )
             return@withContext
         }
 
         val currentFirestore = firestore
         if (currentFirestore == null) {
-            _syncStatus.value = SyncStatus.Synced(System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            _syncStatus.value = SyncStatus.Synced(now)
             return@withContext
         }
 
@@ -307,7 +323,7 @@ class AccountManager(private val context: Context) {
             currentFirestore.collection("users").document(userId)
                 .set(profileMap, SetOptions.merge())
 
-            // 2. Upload local workouts to Firestore
+            // 2. Sync Workouts (Bidirectional)
             val localWorkouts: List<WorkoutEntity> = repository.allWorkoutsFlow.firstOrNull() ?: emptyList()
             for (workout in localWorkouts) {
                 val workoutDocId = "w_${workout.id}"
@@ -329,8 +345,8 @@ class AccountManager(private val context: Context) {
                     .set(workoutMap, SetOptions.merge())
             }
 
-            // 3. Fetch remote workouts
-            val deferredFetch = CompletableDeferred<Boolean>()
+            // Fetch remote workouts
+            val deferredFetchWorkouts = CompletableDeferred<Boolean>()
             currentFirestore.collection("users").document(userId)
                 .collection("workouts")
                 .get()
@@ -372,13 +388,139 @@ class AccountManager(private val context: Context) {
                             }
                         } catch (_: Exception) {}
                     }
-                    deferredFetch.complete(true)
+                    deferredFetchWorkouts.complete(true)
                 }
                 .addOnFailureListener {
-                    deferredFetch.complete(false)
+                    deferredFetchWorkouts.complete(false)
                 }
+            deferredFetchWorkouts.await()
 
-            deferredFetch.await()
+            // 3. Sync Sleep Logs (Bidirectional)
+            val localSleep: List<SleepEntryEntity> = repository.allSleepFlow.firstOrNull() ?: emptyList()
+            for (sleep in localSleep) {
+                val sleepDocId = "s_${sleep.id}"
+                val sleepMap = hashMapOf(
+                    "id" to sleep.id,
+                    "localDate" to sleep.localDate,
+                    "durationMinutes" to sleep.durationMinutes,
+                    "bedtime" to sleep.bedtime,
+                    "wakeTime" to sleep.wakeTime,
+                    "qualityRating" to sleep.qualityRating,
+                    "createdAt" to sleep.createdAt
+                )
+                currentFirestore.collection("users").document(userId)
+                    .collection("sleep").document(sleepDocId)
+                    .set(sleepMap, SetOptions.merge())
+            }
+
+            // Fetch remote sleep
+            val deferredFetchSleep = CompletableDeferred<Boolean>()
+            currentFirestore.collection("users").document(userId)
+                .collection("sleep")
+                .get()
+                .addOnSuccessListener { querySnapshot ->
+                    for (doc in querySnapshot.documents) {
+                        try {
+                            val sleepId = doc.getString("id") ?: doc.id.removePrefix("s_")
+                            val localDate = doc.getString("localDate") ?: ""
+                            val durationMinutes = doc.getLong("durationMinutes")?.toInt() ?: 0
+                            val bedtime = doc.getString("bedtime") ?: ""
+                            val wakeTime = doc.getString("wakeTime") ?: ""
+                            val qualityRating = doc.getLong("qualityRating")?.toInt() ?: 3
+                            val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
+
+                            val exists = localSleep.any { it.id == sleepId || (it.localDate == localDate && localDate.isNotEmpty()) }
+                            if (!exists && localDate.isNotEmpty()) {
+                                kotlinx.coroutines.runBlocking {
+                                    repository.logSleep(
+                                        SleepEntryEntity(
+                                            id = sleepId,
+                                            localDate = localDate,
+                                            durationMinutes = durationMinutes,
+                                            bedtime = bedtime,
+                                            wakeTime = wakeTime,
+                                            qualityRating = qualityRating,
+                                            createdAt = createdAt
+                                        )
+                                    )
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
+                    deferredFetchSleep.complete(true)
+                }
+                .addOnFailureListener {
+                    deferredFetchSleep.complete(false)
+                }
+            deferredFetchSleep.await()
+
+            // 4. Sync Nutrition Entries (Bidirectional)
+            val localNutrition: List<NutritionEntryEntity> = repository.allNutritionFlow.firstOrNull() ?: emptyList()
+            for (nutrition in localNutrition) {
+                val nutDocId = "n_${nutrition.id}"
+                val nutMap = hashMapOf(
+                    "id" to nutrition.id,
+                    "localDate" to nutrition.localDate,
+                    "mealType" to nutrition.mealType,
+                    "foodName" to nutrition.foodName,
+                    "grams" to nutrition.grams,
+                    "calories" to nutrition.calories,
+                    "protein" to nutrition.protein,
+                    "carbs" to nutrition.carbs,
+                    "fat" to nutrition.fat,
+                    "createdAt" to nutrition.createdAt
+                )
+                currentFirestore.collection("users").document(userId)
+                    .collection("nutrition").document(nutDocId)
+                    .set(nutMap, SetOptions.merge())
+            }
+
+            // Fetch remote nutrition
+            val deferredFetchNut = CompletableDeferred<Boolean>()
+            currentFirestore.collection("users").document(userId)
+                .collection("nutrition")
+                .get()
+                .addOnSuccessListener { querySnapshot ->
+                    for (doc in querySnapshot.documents) {
+                        try {
+                            val nutId = doc.getString("id") ?: doc.id.removePrefix("n_")
+                            val localDate = doc.getString("localDate") ?: ""
+                            val mealType = doc.getString("mealType") ?: "CUSTOM"
+                            val foodName = doc.getString("foodName") ?: ""
+                            val grams = doc.getDouble("grams") ?: 100.0
+                            val calories = doc.getDouble("calories") ?: 0.0
+                            val protein = doc.getDouble("protein") ?: 0.0
+                            val carbs = doc.getDouble("carbs") ?: 0.0
+                            val fat = doc.getDouble("fat") ?: 0.0
+                            val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
+
+                            val exists = localNutrition.any { it.id == nutId }
+                            if (!exists && foodName.isNotEmpty()) {
+                                kotlinx.coroutines.runBlocking {
+                                    repository.addNutritionEntry(
+                                        NutritionEntryEntity(
+                                            id = nutId,
+                                            localDate = localDate,
+                                            mealType = mealType,
+                                            foodName = foodName,
+                                            grams = grams,
+                                            calories = calories,
+                                            protein = protein,
+                                            carbs = carbs,
+                                            fat = fat,
+                                            createdAt = createdAt
+                                        )
+                                    )
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
+                    deferredFetchNut.complete(true)
+                }
+                .addOnFailureListener {
+                    deferredFetchNut.complete(false)
+                }
+            deferredFetchNut.await()
 
             val now = System.currentTimeMillis()
             val updated = account.copy(isCloudSynced = true, lastSyncedAt = now)

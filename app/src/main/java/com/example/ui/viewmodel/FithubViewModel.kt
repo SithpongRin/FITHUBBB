@@ -199,8 +199,50 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
     // Update Status
     val updateStatus: StateFlow<UpdateStatus> = UpdateManager.updateStatus
 
+    // Network Monitor & Offline-First State
+    val isOnlineNetwork: StateFlow<Boolean> = accountManager.networkMonitor.isOnline.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        accountManager.networkMonitor.isCurrentlyOnline()
+    )
+
+    // Dynamic In-App Feature Updates (Without APK installation)
+    val dynamicFeatureStatus: StateFlow<com.example.updates.DynamicFeatureStatus> =
+        com.example.updates.DynamicFeatureManager.featureStatus
+
+    fun getInstalledFeatureVersion(): String {
+        return com.example.updates.DynamicFeatureManager.getInstalledFeatureVersion(getApplication())
+    }
+
+    fun checkForFeatureUpdates(forceSimulate: Boolean = false) {
+        viewModelScope.launch {
+            com.example.updates.DynamicFeatureManager.checkForFeatureUpdates(getApplication(), forceSimulate)
+        }
+    }
+
+    fun applyFeatureUpdate(pack: com.example.updates.FeaturePack) {
+        viewModelScope.launch {
+            com.example.updates.DynamicFeatureManager.applyFeatureUpdate(getApplication(), repository, pack)
+        }
+    }
+
+    fun dismissFeatureUpdate() {
+        com.example.updates.DynamicFeatureManager.dismissFeatureUpdate()
+    }
+
     init {
         checkRecoverableSession()
+        observeNetworkForAutoSync()
+    }
+
+    private fun observeNetworkForAutoSync() {
+        viewModelScope.launch {
+            isOnlineNetwork.collect { online ->
+                if (online && currentAccount.value.isOnline) {
+                    accountManager.performCloudSync(repository)
+                }
+            }
+        }
     }
 
     private fun checkRecoverableSession() {

@@ -261,7 +261,228 @@ fun SettingsScreen(
             }
         }
 
-        // About & Updates Section
+        // In-App Feature Updates (Over-The-Air without APK Reinstallation)
+        item {
+            val dynamicFeatureStatus by viewModel.dynamicFeatureStatus.collectAsState()
+            val currentFeatureVer = remember(dynamicFeatureStatus) { viewModel.getInstalledFeatureVersion() }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(22.dp)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = viewModel.str(StringKey.OTA_FEATURES_TITLE),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = viewModel.str(StringKey.OTA_FEATURES_DESC),
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = LimeAccent.copy(alpha = 0.15f),
+                            modifier = Modifier.padding(start = 8.dp)
+                        ) {
+                            Text(
+                                text = "OTA Dynamic",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = LimeAccent
+                                ),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "${viewModel.str(StringKey.OTA_FEATURE_VERSION)}: v$currentFeatureVer",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    when (val fStatus = dynamicFeatureStatus) {
+                        is com.example.updates.DynamicFeatureStatus.Checking -> {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = LimeAccent)
+                                Text(
+                                    text = viewModel.str(StringKey.OTA_STATUS_CHECKING),
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
+                            }
+                        }
+                        is com.example.updates.DynamicFeatureStatus.UpToDate -> {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
+                                Text(
+                                    text = viewModel.str(StringKey.OTA_STATUS_UP_TO_DATE),
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = SuccessGreen, fontWeight = FontWeight.Medium)
+                                )
+                            }
+                        }
+                        is com.example.updates.DynamicFeatureStatus.UpdateAvailable -> {
+                            val pack = fStatus.pack
+                            Card(
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Icon(Icons.Default.Bolt, contentDescription = null, tint = LimeAccent, modifier = Modifier.size(20.dp))
+                                        Text(
+                                            text = if (appLanguage.code == "km") pack.titleKm else pack.titleEn,
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
+                                        )
+                                    }
+                                    Text(
+                                        text = if (appLanguage.code == "km") pack.notesKm else pack.notesEn,
+                                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    )
+                                    Text(
+                                        text = if (appLanguage.code == "km")
+                                            "+${pack.plans.size} គម្រោងហាត់ថ្មី, +${pack.foods.size} មុខម្ហូបថ្មី (មិនបាច់ install APK ឡើងវិញទេ)"
+                                        else
+                                            "+${pack.plans.size} New Plans, +${pack.foods.size} New Foods (Instant In-App Update, No APK Reinstall)",
+                                        style = MaterialTheme.typography.labelSmall.copy(color = SuccessGreen, fontWeight = FontWeight.Bold)
+                                    )
+                                    Button(
+                                        onClick = { viewModel.applyFeatureUpdate(pack) },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = LimeAccent,
+                                            contentColor = CharcoalBackground
+                                        ),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(Icons.Default.SystemUpdateAlt, contentDescription = null)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = viewModel.str(StringKey.OTA_UPDATE_BTN),
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        is com.example.updates.DynamicFeatureStatus.Applying -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = fStatus.stepDescription,
+                                    style = MaterialTheme.typography.bodySmall.copy(color = LimeAccent, fontWeight = FontWeight.SemiBold)
+                                )
+                                LinearProgressIndicator(
+                                    progress = { (fStatus.progressPercent / 100f).coerceIn(0f, 1f) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(CircleShape),
+                                    color = LimeAccent,
+                                    trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                )
+                            }
+                        }
+                        is com.example.updates.DynamicFeatureStatus.Applied -> {
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = SuccessGreen.copy(alpha = 0.15f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen)
+                                    Column {
+                                        Text(
+                                            text = viewModel.str(StringKey.OTA_STATUS_APPLIED),
+                                            style = MaterialTheme.typography.bodyMedium.copy(color = SuccessGreen, fontWeight = FontWeight.Bold)
+                                        )
+                                        Text(
+                                            text = if (appLanguage.code == "km")
+                                                "បានបញ្ចូល ${fStatus.plansAdded} គម្រោង និង ${fStatus.foodsAdded} អាហាររួចរាល់ អាចប្រើបានភ្លាមៗ!"
+                                            else
+                                                "Added ${fStatus.plansAdded} plans & ${fStatus.foodsAdded} foods. Ready to use immediately!",
+                                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        is com.example.updates.DynamicFeatureStatus.Error -> {
+                            Text(
+                                text = fStatus.message,
+                                style = MaterialTheme.typography.bodySmall.copy(color = WarningAmber)
+                            )
+                        }
+                        else -> {
+                            Text(
+                                text = if (appLanguage.code == "km")
+                                    "គាំទ្រការបន្ថែមមុខងារថ្មីៗដោយផ្ទាល់លើ Cloud ដោយមិនប៉ះពាល់ APK"
+                                else
+                                    "Supports instant feature delivery from cloud without APK modification",
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.checkForFeatureUpdates(false) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = viewModel.str(StringKey.OTA_CHECK_BTN),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.checkForFeatureUpdates(true) },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = if (appLanguage.code == "km") "សាកល្បង OTA" else "Test OTA Pack",
+                                color = LimeAccent,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // About & Core Engine Updates Section (Option 2 APK Installer)
         item {
             Card(
                 modifier = Modifier
@@ -273,6 +494,14 @@ fun SettingsScreen(
                     Text(
                         text = viewModel.str(StringKey.ABOUT_UPDATES),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (appLanguage.code == "km")
+                            "សម្រាប់កំណែកូដស្នូលប្រព័ន្ធ (Core APK Engine)"
+                        else
+                            "Native application binary releases (Core APK Engine)",
+                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 

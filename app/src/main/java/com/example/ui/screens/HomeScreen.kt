@@ -62,6 +62,9 @@ fun HomeScreen(
     val updateStatus by viewModel.updateStatus.collectAsState()
     val unitSystem by viewModel.unitSystem.collectAsState()
     val currentAccount by viewModel.currentAccount.collectAsState()
+    val isOnlineNetwork by viewModel.isOnlineNetwork.collectAsState()
+    val syncStatus by viewModel.syncStatus.collectAsState()
+    val dynamicFeatureStatus by viewModel.dynamicFeatureStatus.collectAsState()
 
     // Calculations cached with remember to maximize scrolling and animation smoothness
     val totalSecondsToday = remember(todaysWorkouts) { todaysWorkouts.sumOf { it.durationSeconds } }
@@ -253,6 +256,173 @@ fun HomeScreen(
                                 tint = LimeAccent,
                                 modifier = Modifier.size(24.dp)
                             )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Real-Time Offline-First Cloud Sync Banner
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp)),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (!isOnlineNetwork) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = when {
+                                syncStatus is com.example.account.SyncStatus.Syncing -> LimeAccent.copy(alpha = 0.2f)
+                                !isOnlineNetwork -> WarningAmber.copy(alpha = 0.2f)
+                                currentAccount.isOnline -> SuccessGreen.copy(alpha = 0.2f)
+                                else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                            },
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                when {
+                                    syncStatus is com.example.account.SyncStatus.Syncing -> {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                            color = LimeAccent
+                                        )
+                                    }
+                                    !isOnlineNetwork -> {
+                                        Icon(
+                                            imageVector = Icons.Default.CloudOff,
+                                            contentDescription = "Offline",
+                                            tint = WarningAmber,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    currentAccount.isOnline -> {
+                                        Icon(
+                                            imageVector = Icons.Default.CloudDone,
+                                            contentDescription = "Synced",
+                                            tint = SuccessGreen,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    else -> {
+                                        Icon(
+                                            imageVector = Icons.Default.CloudQueue,
+                                            contentDescription = "Offline Guest",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Column {
+                            Text(
+                                text = when {
+                                    syncStatus is com.example.account.SyncStatus.Syncing -> viewModel.str(StringKey.OFFLINE_SYNC_BANNER_SYNCING)
+                                    !isOnlineNetwork -> viewModel.str(StringKey.OFFLINE_SYNC_BANNER_OFFLINE)
+                                    currentAccount.isOnline -> viewModel.str(StringKey.OFFLINE_SYNC_BANNER_ONLINE)
+                                    else -> viewModel.str(StringKey.ACCOUNT_OFFLINE_MODE)
+                                },
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Text(
+                                text = if (!isOnlineNetwork)
+                                    if (viewModel.appLanguage.collectAsState().value.code == "km") "ដំណើរការធម្មតា ១០០% តាមរយៈ Room SQLite" else "100% operational via Room SQLite"
+                                else if (currentAccount.isOnline)
+                                    if (viewModel.appLanguage.collectAsState().value.code == "km") "ទិន្នន័យត្រូវបានរក្សាទុកលើ Cloud ដោយសុវត្ថិភាព" else "Data safely backed up on cloud"
+                                else
+                                    if (viewModel.appLanguage.collectAsState().value.code == "km") "ទិន្នន័យរក្សាទុកលើទូរសព្ទនេះ" else "Stored on this device",
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+                        }
+                    }
+
+                    if (isOnlineNetwork && currentAccount.isOnline) {
+                        IconButton(
+                            onClick = { viewModel.triggerCloudSync() },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Sync,
+                                contentDescription = "Sync Now",
+                                tint = LimeAccent,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // OTA Dynamic Feature Notification Banner (If new features available without APK install)
+        val currentFeatureStatus = dynamicFeatureStatus
+        if (currentFeatureStatus is com.example.updates.DynamicFeatureStatus.UpdateAvailable) {
+            val pack = currentFeatureStatus.pack
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp)),
+                    colors = CardDefaults.cardColors(containerColor = LimeAccent.copy(alpha = 0.15f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = LimeAccent)
+                            Text(
+                                text = if (viewModel.appLanguage.collectAsState().value.code == "km")
+                                    "មានមុខងារថ្មីក្នុង App ផ្ទាល់ (OTA Update)"
+                                else
+                                    "New In-App Feature Pack Available!",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
+                            )
+                        }
+                        Text(
+                            text = if (viewModel.appLanguage.collectAsState().value.code == "km")
+                                "${pack.titleKm} — មិនបាច់ install APK ឡើងវិញទេ!"
+                            else
+                                "${pack.titleEn} — Instant In-App update, no APK reinstall!",
+                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Button(
+                                onClick = { viewModel.applyFeatureUpdate(pack) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = LimeAccent,
+                                    contentColor = CharcoalBackground
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text(
+                                    text = if (viewModel.appLanguage.collectAsState().value.code == "km") "បញ្ចូលមុខងារឥឡូវនេះ" else "Apply Features Now",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                     }
                 }

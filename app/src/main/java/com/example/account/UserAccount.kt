@@ -25,7 +25,7 @@ sealed class SyncStatus {
     object Idle : SyncStatus()
     object Syncing : SyncStatus()
     data class Synced(val timestamp: Long) : SyncStatus()
-    data class OfflineMode(val localItemsCount: Int) : SyncStatus()
+    data class OfflineMode(val localItemsCount: Int = 0, val hasInternet: Boolean = false) : SyncStatus()
     data class Error(val message: String) : SyncStatus()
 }
 
