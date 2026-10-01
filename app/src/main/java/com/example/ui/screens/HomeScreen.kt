@@ -1,5 +1,12 @@
 package com.example.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -45,6 +52,14 @@ fun HomeScreen(
     onOpenProfile: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val isKm = viewModel.appLanguage.collectAsState().value.code == "km"
+    val activityRecognitionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        viewModel.setStepTrackingEnabled(granted)
+    }
+
     val isDarkMode by viewModel.isDarkMode.collectAsState()
     val isStepTrackingEnabled by viewModel.isStepTrackingEnabled.collectAsState()
     val todayStepCount by viewModel.todayStepCount.collectAsState()
@@ -262,113 +277,7 @@ fun HomeScreen(
             }
         }
 
-        // Real-Time Offline-First Cloud Sync Banner
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp)),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (!isOnlineNetwork) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = when {
-                                syncStatus is com.example.account.SyncStatus.Syncing -> LimeAccent.copy(alpha = 0.2f)
-                                !isOnlineNetwork -> WarningAmber.copy(alpha = 0.2f)
-                                currentAccount.isOnline -> SuccessGreen.copy(alpha = 0.2f)
-                                else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                            },
-                            modifier = Modifier.size(34.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                when {
-                                    syncStatus is com.example.account.SyncStatus.Syncing -> {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(18.dp),
-                                            strokeWidth = 2.dp,
-                                            color = LimeAccent
-                                        )
-                                    }
-                                    !isOnlineNetwork -> {
-                                        Icon(
-                                            imageVector = Icons.Default.CloudOff,
-                                            contentDescription = "Offline",
-                                            tint = WarningAmber,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                    currentAccount.isOnline -> {
-                                        Icon(
-                                            imageVector = Icons.Default.CloudDone,
-                                            contentDescription = "Synced",
-                                            tint = SuccessGreen,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                    else -> {
-                                        Icon(
-                                            imageVector = Icons.Default.CloudQueue,
-                                            contentDescription = "Offline Guest",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
 
-                        Column {
-                            Text(
-                                text = when {
-                                    syncStatus is com.example.account.SyncStatus.Syncing -> viewModel.str(StringKey.OFFLINE_SYNC_BANNER_SYNCING)
-                                    !isOnlineNetwork -> viewModel.str(StringKey.OFFLINE_SYNC_BANNER_OFFLINE)
-                                    currentAccount.isOnline -> viewModel.str(StringKey.OFFLINE_SYNC_BANNER_ONLINE)
-                                    else -> viewModel.str(StringKey.ACCOUNT_OFFLINE_MODE)
-                                },
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                            Text(
-                                text = if (!isOnlineNetwork)
-                                    if (viewModel.appLanguage.collectAsState().value.code == "km") "ដំណើរការធម្មតា ១០០% តាមរយៈ Room SQLite" else "100% operational via Room SQLite"
-                                else if (currentAccount.isOnline)
-                                    if (viewModel.appLanguage.collectAsState().value.code == "km") "ទិន្នន័យត្រូវបានរក្សាទុកលើ Cloud ដោយសុវត្ថិភាព" else "Data safely backed up on cloud"
-                                else
-                                    if (viewModel.appLanguage.collectAsState().value.code == "km") "ទិន្នន័យរក្សាទុកលើទូរសព្ទនេះ" else "Stored on this device",
-                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            )
-                        }
-                    }
-
-                    if (isOnlineNetwork && currentAccount.isOnline) {
-                        IconButton(
-                            onClick = { viewModel.triggerCloudSync() },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Sync,
-                                contentDescription = "Sync Now",
-                                tint = LimeAccent,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
 
 
 
@@ -522,10 +431,20 @@ fun HomeScreen(
                             }
                         }
 
-                        // Prominent ON / OFF Switch
+                        // Prominent ON / OFF Switch (with in-app runtime permission check)
                         Switch(
                             checked = isStepTrackingEnabled,
-                            onCheckedChange = { viewModel.setStepTrackingEnabled(it) },
+                            onCheckedChange = { enabled ->
+                                if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+                                        activityRecognitionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                                    } else {
+                                        viewModel.setStepTrackingEnabled(true)
+                                    }
+                                } else {
+                                    viewModel.setStepTrackingEnabled(enabled)
+                                }
+                            },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = CharcoalBackground,
                                 checkedTrackColor = LimeAccent
@@ -550,8 +469,9 @@ fun HomeScreen(
                                     fontSize = 32.sp
                                 )
                             )
+                            val stepUnit = if (isKm) "ជំហាន" else "steps"
                             Text(
-                                text = "/ $todayStepGoal steps",
+                                text = "/ $todayStepGoal $stepUnit",
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Medium
@@ -615,20 +535,14 @@ fun HomeScreen(
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                                 )
                             }
-
-                            // Simulator test button (+100 steps)
-                            FilledTonalButton(
-                                onClick = { viewModel.addManualSteps(100) },
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("+100", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
                         }
                     } else {
                         // Paused State Explanation
                         Text(
-                            text = "Step tracking is paused. Turn on the switch above to automatically count your daily steps in the background.",
+                            text = if (isKm)
+                                "ការរាប់ជំហានត្រូវបានផ្អាក។ សូមបើកកុងតាក់ខាងលើ ដើម្បីរាប់ជំហានប្រចាំថ្ងៃរបស់អ្នក។"
+                            else
+                                "Step tracking is paused. Turn on the switch above to automatically count your daily steps in the background.",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

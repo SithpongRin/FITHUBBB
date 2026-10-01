@@ -1,6 +1,7 @@
 package com.example
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -8,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.content.ContextCompat
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.*
@@ -55,15 +57,29 @@ class MainActivity : ComponentActivity() {
             val currentTab by viewModel.currentTab.collectAsState()
             var showSleepDialog by remember { mutableStateOf(false) }
 
-            val notificationPermissionLauncher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.RequestPermission(),
+            val permissionsLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestMultiplePermissions(),
                 onResult = { _ -> }
             )
 
             LaunchedEffect(Unit) {
+                val neededPermissions = mutableListOf<String>()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    neededPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
                 }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    neededPermissions.add(Manifest.permission.ACTIVITY_RECOGNITION)
+                }
+                neededPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+                neededPermissions.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+
+                val notGranted = neededPermissions.filter {
+                    ContextCompat.checkSelfPermission(this@MainActivity, it) != PackageManager.PERMISSION_GRANTED
+                }
+                if (notGranted.isNotEmpty()) {
+                    permissionsLauncher.launch(notGranted.toTypedArray())
+                }
+
                 // Auto-check for OTA features and APK updates on launch
                 viewModel.checkForFeatureUpdates(forceSimulate = false)
                 viewModel.checkForUpdates(forceSimulate = false)
@@ -112,10 +128,11 @@ class MainActivity : ComponentActivity() {
                             FloatingBottomNav(
                                 selectedTab = currentTab,
                                 onTabSelected = { viewModel.currentTab.value = it },
+                                isKm = viewModel.appLanguage.collectAsState().value.code == "km",
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
                                     .navigationBarsPadding()
-                                    .padding(bottom = 14.dp)
+                                    .padding(bottom = 10.dp)
                             )
                         }
 

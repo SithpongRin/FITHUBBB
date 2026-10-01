@@ -139,6 +139,14 @@ fun WorkoutIdleView(
     viewModel: FithubViewModel,
     modifier: Modifier = Modifier
 ) {
+    val isKm = viewModel.appLanguage.collectAsState().value.code == "km"
+    val modalities = listOf(
+        Triple("RUNNING", StringKey.WORKOUT_RUNNING, Icons.Default.DirectionsRun),
+        Triple("WALKING", StringKey.WORKOUT_WALKING, Icons.Default.DirectionsWalk),
+        Triple("JUMPING", StringKey.WORKOUT_JUMPING, Icons.Default.VerticalAlignTop),
+        Triple("WEIGHTLIFTING", StringKey.WORKOUT_WEIGHTLIFTING, Icons.Default.FitnessCenter)
+    )
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -156,19 +164,12 @@ fun WorkoutIdleView(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Select an activity to begin tracking.",
+                text = if (isKm) "ជ្រើសរើសប្រភេទលំហាត់ប្រាណដើម្បីចាប់ផ្តើម" else "Select an activity to begin tracking.",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
         }
-
-        val modalities = listOf(
-            Triple("RUNNING", StringKey.WORKOUT_RUNNING, Icons.Default.DirectionsRun),
-            Triple("WALKING", StringKey.WORKOUT_WALKING, Icons.Default.DirectionsWalk),
-            Triple("JUMPING", StringKey.WORKOUT_JUMPING, Icons.Default.VerticalAlignTop),
-            Triple("WEIGHTLIFTING", StringKey.WORKOUT_WEIGHTLIFTING, Icons.Default.FitnessCenter)
-        )
 
         items(modalities) { (type, stringKey, icon) ->
             Card(
@@ -217,10 +218,10 @@ fun WorkoutIdleView(
                             )
                             Text(
                                 text = when (type) {
-                                    "RUNNING" -> "GPS pace, distance & calories"
-                                    "WALKING" -> "Pace, distance & calories"
-                                    "JUMPING" -> "Sensor jump counter & cadence"
-                                    else -> "Exercise sets, volume & rest timer"
+                                    "RUNNING" -> if (isKm) "ល្បឿន GPS ចម្ងាយ និងកាឡូរី" else "GPS pace, distance & calories"
+                                    "WALKING" -> if (isKm) "ល្បឿន ចម្ងាយ និងកាឡូរី" else "Pace, distance & calories"
+                                    "JUMPING" -> if (isKm) "ឧបករណ៍ Sensor រាប់ចំនួនលោត" else "Sensor jump counter & cadence"
+                                    else -> if (isKm) "កំណត់ចំនួន Set និងម៉ោងសម្រាក" else "Exercise sets, volume & rest timer"
                                 },
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
