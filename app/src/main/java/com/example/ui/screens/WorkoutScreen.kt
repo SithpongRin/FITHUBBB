@@ -4,7 +4,10 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,10 +20,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -116,21 +123,38 @@ fun WorkoutScreen(
         }
     }
 
-    if (!activeWorkout.isActive) {
-        // Idle Screen: Choose modality to start
-        WorkoutIdleView(
-            viewModel = viewModel,
-            modifier = modifier
-        )
-    } else {
-        // Active Session Screen
-        ActiveSessionView(
-            viewModel = viewModel,
-            activeWorkout = activeWorkout,
-            jumpDetector = jumpDetector,
-            unitSystem = unitSystem,
-            modifier = modifier
-        )
+    val countdown by viewModel.workoutCountdown.collectAsState()
+    val countdownType by viewModel.workoutCountdownType.collectAsState()
+    val isKm = viewModel.appLanguage.collectAsState().value.code == "km"
+
+    Box(modifier = modifier.fillMaxSize()) {
+        if (!activeWorkout.isActive) {
+            // Idle Screen: Choose modality to start
+            WorkoutIdleView(
+                viewModel = viewModel,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            // Active Session Screen
+            ActiveSessionView(
+                viewModel = viewModel,
+                activeWorkout = activeWorkout,
+                jumpDetector = jumpDetector,
+                unitSystem = unitSystem,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        // 3-2-1 Countdown Overlay
+        if (countdown != null && countdownType != null) {
+            WorkoutCountdownOverlay(
+                countdown = countdown ?: 3,
+                workoutType = countdownType ?: "RUNNING",
+                isKm = isKm,
+                onSkip = { viewModel.skipCountdown() },
+                onCancel = { viewModel.cancelCountdown() }
+            )
+        }
     }
 }
 
@@ -709,3 +733,139 @@ fun ActiveSessionView(
         }
     }
 }
+
+@Composable
+fun WorkoutCountdownOverlay(
+    countdown: Int,
+    workoutType: String,
+    isKm: Boolean,
+    onSkip: () -> Unit,
+    onCancel: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    LaunchedEffect(countdown) {
+        try {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        } catch (_: Throwable) {}
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CharcoalBackground.copy(alpha = 0.94f))
+            .clickable(enabled = false) {},
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Text(
+                text = if (isKm) "ត្រៀមខ្លួនសម្រាប់" else "Get Ready for",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = when (workoutType) {
+                    "RUNNING" -> if (isKm) "ការរត់" else "Running"
+                    "WALKING" -> if (isKm) "ការដើរ" else "Walking"
+                    "JUMPING" -> if (isKm) "ការលោតខ្សែ" else "Jump Rope"
+                    "WEIGHTLIFTING" -> if (isKm) "លើកទម្ងន់" else "Weightlifting"
+                    else -> workoutType
+                },
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+
+            Spacer(modifier = Modifier.height(36.dp))
+
+            val transition = updateTransition(targetState = countdown, label = "countdownTransition")
+            val scale by transition.animateFloat(
+                transitionSpec = {
+                    spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+                },
+                label = "scale"
+            ) { count ->
+                if (count == 0) 1.2f else 1.0f
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(170.dp)
+                    .scale(scale)
+                    .clip(CircleShape)
+                    .background(LimeAccent.copy(alpha = 0.18f))
+                    .border(4.dp, LimeAccent, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (countdown == 0) (if (isKm) "ចាប់ផ្តើម!" else "GO!") else "$countdown",
+                    style = if (countdown == 0)
+                        MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.Black,
+                            fontSize = 32.sp,
+                            color = LimeAccent
+                        )
+                    else
+                        MaterialTheme.typography.displayLarge.copy(
+                            fontWeight = FontWeight.Black,
+                            fontSize = 80.sp,
+                            color = LimeAccent
+                        )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(36.dp))
+
+            Text(
+                text = if (isKm) "ចូលទីតាំង និងត្រៀមឧបករណ៍របស់អ្នក..." else "Get in position and get ready...",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(36.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = onCancel,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.height(48.dp)
+                ) {
+                    Text(
+                        text = if (isKm) "បោះបង់" else "Cancel",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Button(
+                    onClick = onSkip,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = LimeAccent,
+                        contentColor = CharcoalBackground
+                    ),
+                    modifier = Modifier.height(48.dp)
+                ) {
+                    Text(
+                        text = if (isKm) "ចាប់ផ្តើមភ្លាម" else "Start Now",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+

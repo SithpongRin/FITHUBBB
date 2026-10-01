@@ -278,8 +278,51 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // Workout Controls
-    fun startWorkout(type: String) {
+    // Workout Controls & Countdown
+    val workoutCountdown = MutableStateFlow<Int?>(null)
+    val workoutCountdownType = MutableStateFlow<String?>(null)
+    private var countdownJob: kotlinx.coroutines.Job? = null
+
+    fun startWorkout(type: String, skipCountdown: Boolean = false) {
+        if (skipCountdown) {
+            countdownJob?.cancel()
+            workoutCountdown.value = null
+            workoutCountdownType.value = null
+            executeStartWorkout(type)
+            return
+        }
+
+        // Trigger 3, 2, 1, GO countdown
+        currentTab.value = ScreenTab.WORKOUT
+        countdownJob?.cancel()
+        workoutCountdownType.value = type
+        countdownJob = viewModelScope.launch {
+            workoutCountdown.value = 3
+            delay(1000)
+            workoutCountdown.value = 2
+            delay(1000)
+            workoutCountdown.value = 1
+            delay(1000)
+            workoutCountdown.value = 0 // GO!
+            delay(500)
+            workoutCountdown.value = null
+            workoutCountdownType.value = null
+            executeStartWorkout(type)
+        }
+    }
+
+    fun skipCountdown() {
+        val type = workoutCountdownType.value ?: "RUNNING"
+        startWorkout(type, skipCountdown = true)
+    }
+
+    fun cancelCountdown() {
+        countdownJob?.cancel()
+        workoutCountdown.value = null
+        workoutCountdownType.value = null
+    }
+
+    private fun executeStartWorkout(type: String) {
         val now = System.currentTimeMillis()
         val defaultExercises = if (type == "WEIGHTLIFTING") {
             listOf(
