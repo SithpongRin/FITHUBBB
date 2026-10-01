@@ -56,6 +56,7 @@ fun AuthGateScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var infoMessage by remember { mutableStateOf<String?>(null) }
+    var showGoogleNoticeDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -64,57 +65,58 @@ fun AuthGateScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        // High-contrast Dual Language Switcher in top right corner
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(4.dp)
-                .testTag("auth_language_switcher"),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(if (isKm) LimeAccent else Color.Transparent)
-                    .clickable { viewModel.setLanguage(AppLanguage.KHMER) }
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = "ខ្មែរ",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = if (isKm) CharcoalBackground else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(if (!isKm) LimeAccent else Color.Transparent)
-                    .clickable { viewModel.setLanguage(AppLanguage.ENGLISH) }
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = "EN",
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = if (!isKm) CharcoalBackground else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 20.dp),
+                .padding(horizontal = 24.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(28.dp))
+            // High-contrast Dual Language Switcher in top right corner
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(4.dp)
+                        .testTag("auth_language_switcher"),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (isKm) LimeAccent else Color.Transparent,
+                        onClick = { viewModel.setLanguage(AppLanguage.KHMER) }
+                    ) {
+                        Text(
+                            text = "ខ្មែរ",
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = if (isKm) CharcoalBackground else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (!isKm) LimeAccent else Color.Transparent,
+                        onClick = { viewModel.setLanguage(AppLanguage.ENGLISH) }
+                    ) {
+                        Text(
+                            text = "EN",
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = if (!isKm) CharcoalBackground else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
+                }
+            }
 
             // App Brand Logo & Hero Header
             Box(
@@ -449,11 +451,8 @@ fun AuthGateScreen(
                                         ) { _, _ -> }
                                     }
                                 } catch (e: Exception) {
-                                    // Clean, polite explanation without fake mock bypass
-                                    errorMessage = if (isKm)
-                                        "សេវា Google Sign-In ត្រូវការ Web Client ID។ សូមចុះឈ្មោះ ឬចូលប្រើប្រាស់ដោយប្រើ Email និង Password ផ្ទាល់ខាងលើ ដើម្បីដំណើរការភ្លាមៗ!"
-                                    else
-                                        "Google Sign-In requires Web Client ID. Please sign up with Email and Password directly above to start immediately!"
+                                    // Show clear, polite dialog instead of scary red inline error
+                                    showGoogleNoticeDialog = true
                                 } finally {
                                     isLoading = false
                                 }
@@ -500,6 +499,49 @@ fun AuthGateScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Informative Google Notice Dialog
+        if (showGoogleNoticeDialog) {
+            AlertDialog(
+                onDismissRequest = { showGoogleNoticeDialog = false },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = null,
+                        tint = LimeAccent,
+                        modifier = Modifier.size(36.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        text = "Google Sign-In",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                },
+                text = {
+                    Text(
+                        text = if (isKm)
+                            "ដើម្បីផ្ទៀងផ្ទាត់ជាមួយ Google Account ដោយសុវត្ថិភាព តម្រូវឱ្យភ្ជាប់គម្រោង Google Cloud Console OAuth Client ID ពី Developer។\n\nសម្រាប់ពេលនេះ សូមចុះឈ្មោះ ឬចូលប្រើប្រាស់ជាមួយ Email និង Password ផ្ទាល់ខាងលើ ដើម្បីចាប់ផ្តើមភ្លាមៗ!"
+                        else
+                            "Google Sign-In requires developer Google Cloud OAuth setup.\n\nPlease sign up or sign in directly with Email and Password above to get started immediately!",
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showGoogleNoticeDialog = false },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LimeAccent,
+                            contentColor = CharcoalBackground
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(text = if (isKm) "យល់ព្រម" else "Got It", fontWeight = FontWeight.Bold)
+                    }
+                },
+                shape = RoundedCornerShape(20.dp)
+            )
         }
     }
 }

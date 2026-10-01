@@ -1,8 +1,6 @@
 package com.example.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -17,10 +15,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import com.example.ui.theme.CharcoalBackground
 import com.example.ui.theme.LimeAccent
@@ -34,73 +30,58 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
     val featureStatus by viewModel.dynamicFeatureStatus.collectAsState()
     val apkStatus by viewModel.updateStatus.collectAsState()
 
-    // 1. Dynamic Feature Updates (OTA - Without APK Reinstall)
+    // 1. Dynamic Feature Updates (OTA in-app update - concise and short)
     when (val status = featureStatus) {
         is DynamicFeatureStatus.UpdateAvailable -> {
             val pack = status.pack
             AlertDialog(
                 onDismissRequest = { viewModel.dismissFeatureUpdate() },
                 icon = {
-                    Box(
-                        modifier = Modifier
-                            .size(54.dp)
-                            .clip(CircleShape)
-                            .background(LimeAccent.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = LimeAccent,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = LimeAccent,
+                        modifier = Modifier.size(32.dp)
+                    )
                 },
                 title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = if (isKm) "មានមុខងារថ្មីក្នុង App!" else "New In-App Features Available!",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 30.sp
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = LimeAccent.copy(alpha = 0.18f)
-                        ) {
-                            Text(
-                                text = if (isKm) "អាប់ដែតក្នុង App ផ្ទាល់ (មិនបាច់ Install APK)" else "Instant In-App Update (No APK Reinstall)",
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = LimeAccent,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            )
-                        }
-                    }
+                    Text(
+                        text = if (isKm) "មានការអាប់ដែតថ្មី!" else "New Update Available!",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
                 },
                 text = {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = if (isKm) pack.titleKm else pack.titleEn,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                            text = if (isKm) "កំណែ៖ v${pack.featureVersion}" else "Version: v${pack.featureVersion}",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                color = LimeAccent,
+                                fontWeight = FontWeight.Bold
+                            )
                         )
                         Text(
-                            text = if (isKm) pack.notesKm else pack.notesEn,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                lineHeight = 22.sp
-                            )
+                            text = if (isKm) "អ្វីដែលបានបន្ថែមថ្មី៖" else "What's new:",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                         )
                         if (pack.plans.isNotEmpty()) {
                             Text(
-                                text = if (isKm) "+ គម្រោងហាត់ថ្មី៖ ${pack.plans.joinToString { it.name }}" else "+ New Plans: ${pack.plans.joinToString { it.name }}",
-                                style = MaterialTheme.typography.labelMedium.copy(color = LimeAccent)
+                                text = if (isKm) "• ${pack.plans.first().name}" else "• ${pack.plans.first().name}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        if (pack.foods.isNotEmpty()) {
+                            Text(
+                                text = if (isKm) "• បញ្ជីម្ហូបអាហារសុខភាពខ្មែរ" else "• Healthy Khmer nutrition foods",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        if (pack.challenges.isNotEmpty()) {
+                            Text(
+                                text = if (isKm) "• កម្មវិធីប្រកួតប្រជែងថ្មីៗ" else "• New challenges",
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                     }
@@ -128,37 +109,37 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                         )
                     }
                 },
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(20.dp)
             )
         }
 
         is DynamicFeatureStatus.Applying -> {
             AlertDialog(
-                onDismissRequest = { /* Non-dismissible while applying */ },
+                onDismissRequest = { /* Non-dismissible */ },
                 properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
                 title = {
                     Text(
-                        text = if (isKm) "កំពុងអាប់ដែតមុខងារ..." else "Applying In-App Update...",
+                        text = if (isKm) "កំពុងអាប់ដែត..." else "Updating...",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 },
                 text = {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         LinearProgressIndicator(
                             progress = { status.progressPercent / 100f },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
                             color = LimeAccent
                         )
                         Text(
-                            text = "${status.stepDescription} (${status.progressPercent}%)",
-                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            text = "${status.progressPercent}%",
+                            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                         )
                     }
                 },
@@ -175,22 +156,22 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = null,
                         tint = LimeAccent,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 },
                 title = {
                     Text(
-                        text = if (isKm) "អាប់ដែតជោគជ័យ!" else "Update Complete!",
+                        text = if (isKm) "អាប់ដែតរួចរាល់!" else "Update Complete!",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 },
                 text = {
                     Text(
                         text = if (isKm)
-                            "មុខងារថ្មីត្រូវបានបញ្ចូលទៅក្នុង App ដោយជោគជ័យ។ លោកអ្នកអាចប្រើប្រាស់មុខងារទាំងអស់នេះបានភ្លាមៗ ទោះបីគ្មានអ៊ីនធឺណិត (Offline)។"
+                            "មុខងារថ្មីត្រូវបានដាក់បញ្ចូលរួចរាល់។ អ្នកអាចប្រើប្រាស់បានភ្លាមៗ!"
                         else
-                            "Features applied directly into local storage. Fully usable offline immediately without APK reinstall.",
-                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
+                            "New features added successfully. Ready to use!",
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 },
                 confirmButton = {
@@ -202,58 +183,34 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(
-                            text = if (isKm) "យល់ព្រម" else "Got It",
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text(text = if (isKm) "យល់ព្រម" else "OK", fontWeight = FontWeight.Bold)
                     }
                 },
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(20.dp)
             )
         }
 
         else -> Unit
     }
 
-    // 2. Core App APK Updates (When a new native build is released)
+    // 2. Core App APK Updates (Concise and short)
     when (val status = apkStatus) {
         is UpdateStatus.Available -> {
             AlertDialog(
                 onDismissRequest = { viewModel.dismissUpdate() },
                 icon = {
-                    Box(
-                        modifier = Modifier
-                            .size(54.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SystemUpdate,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.SystemUpdate,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
+                    )
                 },
                 title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = if (isKm) "មានកំណែកម្មវិធីថ្មី!" else "New App Version Available!",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 30.sp
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "v${status.version}",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        )
-                    }
+                    Text(
+                        text = if (isKm) "មានការអាប់ដែតថ្មី!" else "New Update Available!",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
                 },
                 text = {
                     Column(
@@ -261,16 +218,19 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = if (isKm) status.notesKm else status.notesEn,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                lineHeight = 22.sp
+                            text = if (isKm) "កំណែ៖ v${status.version}" else "Version: v${status.version}",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
                             )
                         )
-                        val sizeMb = String.format("%.1f MB", status.downloadSizeBytes / (1024f * 1024f))
                         Text(
-                            text = if (isKm) "ទំហំឯកសារ៖ $sizeMb" else "Size: $sizeMb",
-                            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            text = if (isKm) "អ្វីដែលបានបន្ថែមថ្មី៖" else "What's new:",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
+                        )
+                        Text(
+                            text = if (isKm) "• ${status.notesKm}" else "• ${status.notesEn}",
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                 },
@@ -284,7 +244,7 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = if (isKm) "ទាញយក និងដំឡើង" else "Download & Install",
+                            text = if (isKm) "អាប់ដែតឥឡូវនេះ" else "Update Now",
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -297,16 +257,16 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                         )
                     }
                 },
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(20.dp)
             )
         }
 
         is UpdateStatus.Downloading -> {
             AlertDialog(
-                onDismissRequest = { /* Download in progress */ },
+                onDismissRequest = { /* Downloading */ },
                 title = {
                     Text(
-                        text = if (isKm) "កំពុងទាញយកកំណែ v${status.version}..." else "Downloading v${status.version}...",
+                        text = if (isKm) "កំពុងទាញយក v${status.version}..." else "Downloading v${status.version}...",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 },
@@ -319,25 +279,14 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                             progress = { status.progressPercent / 100f },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "${status.progressPercent}%",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                            val downloadedMb = String.format("%.1f", status.downloadedBytes / (1024f * 1024f))
-                            val totalMb = String.format("%.1f MB", status.totalBytes / (1024f * 1024f))
-                            Text(
-                                text = "$downloadedMb / $totalMb",
-                                style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            )
-                        }
+                        Text(
+                            text = "${status.progressPercent}%",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                        )
                     }
                 },
                 confirmButton = {},
@@ -361,7 +310,7 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                         imageVector = Icons.Default.CloudDownload,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 },
                 title = {
@@ -372,11 +321,8 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                 },
                 text = {
                     Text(
-                        text = if (isKm)
-                            "ឯកសារកំណែ v${status.version} ត្រូវបានទាញយករួចរាល់។ សូមចុចដំឡើងដើម្បីបញ្ចប់។"
-                        else
-                            "Package v${status.version} downloaded successfully. Tap install to complete the update.",
-                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
+                        text = if (isKm) "សូមចុចដំឡើងដើម្បីបញ្ចប់ការអាប់ដែត។" else "Tap install to complete the update.",
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 },
                 confirmButton = {
@@ -402,7 +348,7 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                         )
                     }
                 },
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(20.dp)
             )
         }
 
@@ -414,7 +360,7 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                         imageVector = Icons.Default.Security,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 },
                 title = {
@@ -425,11 +371,8 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                 },
                 text = {
                     Text(
-                        text = if (isKm)
-                            "ដើម្បីដំឡើងកំណែកម្មវិធីថ្មីដោយផ្ទាល់ពីក្នុង App សូមបើកសិទ្ធិ «អនុញ្ញាតឱ្យដំឡើងកម្មវិធីមិនស្គាល់ប្រភព» (Install unknown apps)។"
-                        else
-                            "To install update directly from the app, please enable 'Install unknown apps' permission.",
-                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
+                        text = if (isKm) "សូមបើកសិទ្ធិអនុញ្ញាតឱ្យដំឡើងកម្មវិធី។" else "Please allow install permission.",
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 },
                 confirmButton = {
@@ -438,7 +381,7 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = if (isKm) "បើកការអនុញ្ញាត" else "Open Settings",
+                            text = if (isKm) "បើកការកំណត់" else "Settings",
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -451,7 +394,7 @@ fun InAppUpdateDialogs(viewModel: FithubViewModel) {
                         )
                     }
                 },
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(20.dp)
             )
         }
 
