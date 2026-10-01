@@ -18,10 +18,14 @@ class DailyStepTracker(
     private val onStepsUpdated: (steps: Int, distanceMeters: Double, calories: Double) -> Unit = { _, _, _ -> }
 ) : SensorEventListener {
 
-    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val stepCounterSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
-    private val stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
-    private val accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    private val sensorManager = try {
+        context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+    } catch (_: Throwable) {
+        null
+    }
+    private val stepCounterSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+    private val stepDetectorSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+    private val accelerometerSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("fithub_step_prefs", Context.MODE_PRIVATE)
@@ -74,18 +78,30 @@ class DailyStepTracker(
     }
 
     private fun registerListener() {
-        // Prefer hardware low-power step counter
-        if (stepCounterSensor != null) {
-            sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_UI)
-        } else if (stepDetectorSensor != null) {
-            sensorManager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_UI)
-        } else if (accelerometerSensor != null) {
-            sensorManager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_GAME)
-        }
+        val manager = sensorManager ?: return
+        try {
+            // Prefer hardware low-power step counter
+            if (stepCounterSensor != null) {
+                manager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_UI)
+            } else if (stepDetectorSensor != null) {
+                manager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_UI)
+            } else if (accelerometerSensor != null) {
+                manager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_GAME)
+            }
+        } catch (_: SecurityException) {
+            // Runtime permission not granted yet, try fallback to accelerometer
+            try {
+                if (accelerometerSensor != null) {
+                    manager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_GAME)
+                }
+            } catch (_: Throwable) {}
+        } catch (_: Throwable) {}
     }
 
     private fun unregisterListener() {
-        sensorManager.unregisterListener(this)
+        try {
+            sensorManager?.unregisterListener(this)
+        } catch (_: Throwable) {}
     }
 
     override fun onSensorChanged(event: SensorEvent?) {

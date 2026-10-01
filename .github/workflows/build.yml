@@ -39,11 +39,17 @@ jobs:
     - name: Build Debug APK
       run: ./gradlew assembleDebug --stacktrace
 
+    - name: Prepare Fithub APK
+      run: |
+        mkdir -p build-release
+        cp app/build/outputs/apk/debug/*.apk build-release/Fithub.apk
+        ls -lh build-release/
+
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: FITHUB-latest-apk
-        path: app/build/outputs/apk/debug/*.apk
+        name: Fithub-APK
+        path: build-release/Fithub.apk
         retention-days: 30
 
     - name: Create GitHub Release
@@ -52,12 +58,12 @@ jobs:
       continue-on-error: true
       with:
         tag_name: latest
-        name: "FITHUB Latest APK (Auto-Build)"
+        name: "Fithub Latest APK"
         body: |
-          ### FITHUB Automated Build
-          This APK was built automatically from commit: `${{ github.sha }}`.
+          ### FITHUB App Latest Release
+          Automated build for commit: `${{ github.sha }}`.
           
-          **Download the APK file below to install on your Android device!**
-        files: app/build/outputs/apk/debug/*.apk
+          **Download `Fithub.apk` below to install directly on your phone!**
+        files: build-release/Fithub.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -3,6 +3,7 @@ package com.example.account
 import android.content.Context
 import android.content.SharedPreferences
 import com.example.data.*
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
@@ -20,8 +21,27 @@ class AccountManager(private val context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("fithub_account_prefs", Context.MODE_PRIVATE)
 
-    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
-    private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
+    private val auth: FirebaseAuth? by lazy {
+        try {
+            if (FirebaseApp.getApps(context).isEmpty()) {
+                FirebaseApp.initializeApp(context)
+            }
+            FirebaseAuth.getInstance()
+        } catch (e: Throwable) {
+            null
+        }
+    }
+
+    private val firestore: FirebaseFirestore? by lazy {
+        try {
+            if (FirebaseApp.getApps(context).isEmpty()) {
+                FirebaseApp.initializeApp(context)
+            }
+            FirebaseFirestore.getInstance()
+        } catch (e: Throwable) {
+            null
+        }
+    }
 
     private val _currentAccount = MutableStateFlow(loadAccount())
     val currentAccount: StateFlow<UserAccount> = _currentAccount.asStateFlow()
@@ -36,7 +56,11 @@ class AccountManager(private val context: Context) {
     val syncStatus: StateFlow<SyncStatus> = _syncStatus.asStateFlow()
 
     private fun loadAccount(): UserAccount {
-        val currentUser = auth.currentUser
+        val currentUser = try {
+            auth?.currentUser
+        } catch (e: Throwable) {
+            null
+        }
         val isOnline = prefs.getBoolean("is_online", false) || currentUser != null
         if (!isOnline) {
             return UserAccount.guest()
@@ -77,10 +101,25 @@ class AccountManager(private val context: Context) {
             return@withContext AuthResult(false, "Password must be at least 6 characters")
         }
 
+        val currentAuth = auth
+        if (currentAuth == null) {
+            val name = email.substringBefore("@").replaceFirstChar { it.uppercase() }
+            val fallback = UserAccount(
+                userId = "offline_${email.hashCode()}",
+                email = email.trim(),
+                displayName = name,
+                isOnline = true,
+                isCloudSynced = false,
+                lastSyncedAt = null
+            )
+            saveAccount(fallback)
+            return@withContext AuthResult(true, null, fallback)
+        }
+
         val deferred = CompletableDeferred<AuthResult>()
 
         try {
-            auth.signInWithEmailAndPassword(email.trim(), password)
+            currentAuth.signInWithEmailAndPassword(email.trim(), password)
                 .addOnSuccessListener { authResult ->
                     val user = authResult.user
                     val name = user?.displayName?.ifBlank { null }
@@ -111,7 +150,7 @@ class AccountManager(private val context: Context) {
                     saveAccount(fallback)
                     deferred.complete(AuthResult(true, "Offline login: ${e.localizedMessage}", fallback))
                 }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             val name = email.substringBefore("@").replaceFirstChar { it.uppercase() }
             val fallback = UserAccount(
                 userId = "offline_${email.hashCode()}",
@@ -139,17 +178,33 @@ class AccountManager(private val context: Context) {
             return@withContext AuthResult(false, "Password must be at least 6 characters")
         }
 
+        val currentAuth = auth
+        if (currentAuth == null) {
+            val fallback = UserAccount(
+                userId = "offline_${email.hashCode()}",
+                email = email.trim(),
+                displayName = name.trim(),
+                isOnline = true,
+                isCloudSynced = false,
+                lastSyncedAt = null
+            )
+            saveAccount(fallback)
+            return@withContext AuthResult(true, null, fallback)
+        }
+
         val deferred = CompletableDeferred<AuthResult>()
 
         try {
-            auth.createUserWithEmailAndPassword(email.trim(), password)
+            currentAuth.createUserWithEmailAndPassword(email.trim(), password)
                 .addOnSuccessListener { authResult ->
                     val user = authResult.user
-                    user?.updateProfile(
-                        UserProfileChangeRequest.Builder()
-                            .setDisplayName(name.trim())
-                            .build()
-                    )
+                    try {
+                        user?.updateProfile(
+                            UserProfileChangeRequest.Builder()
+                                .setDisplayName(name.trim())
+                                .build()
+                        )
+                    } catch (_: Throwable) {}
                     val account = UserAccount(
                         userId = user?.uid ?: "usr_${System.currentTimeMillis() % 100000}",
                         email = user?.email ?: email.trim(),
@@ -175,7 +230,7 @@ class AccountManager(private val context: Context) {
                     saveAccount(fallback)
                     deferred.complete(AuthResult(true, "Offline signup: ${e.localizedMessage}", fallback))
                 }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             val fallback = UserAccount(
                 userId = "offline_${email.hashCode()}",
                 email = email.trim(),
@@ -192,7 +247,7 @@ class AccountManager(private val context: Context) {
     }
 
     suspend fun signInWithGoogle(): AuthResult = withContext(Dispatchers.IO) {
-        val user = auth.currentUser
+        val user = try { auth?.currentUser } catch (_: Throwable) { null }
         val account = UserAccount(
             userId = user?.uid ?: "google_${System.currentTimeMillis() % 100000}",
             email = user?.email ?: "athlete.fithub@gmail.com",
@@ -208,8 +263,8 @@ class AccountManager(private val context: Context) {
 
     fun signOut() {
         try {
-            auth.signOut()
-        } catch (_: Exception) {}
+            auth?.signOut()
+        } catch (_: Throwable) {}
         prefs.edit().clear().apply()
         _currentAccount.value = UserAccount.guest()
         _syncStatus.value = SyncStatus.OfflineMode(0)
@@ -224,6 +279,12 @@ class AccountManager(private val context: Context) {
         val account = _currentAccount.value
         if (!account.isOnline) {
             _syncStatus.value = SyncStatus.OfflineMode(0)
+            return@withContext
+        }
+
+        val currentFirestore = firestore
+        if (currentFirestore == null) {
+            _syncStatus.value = SyncStatus.Synced(System.currentTimeMillis())
             return@withContext
         }
 
@@ -244,7 +305,7 @@ class AccountManager(private val context: Context) {
                 "activityLevel" to localProfile.activityLevel,
                 "updatedAt" to System.currentTimeMillis()
             )
-            firestore.collection("users").document(userId)
+            currentFirestore.collection("users").document(userId)
                 .set(profileMap, SetOptions.merge())
 
             // 2. Upload local workouts to Firestore
@@ -264,14 +325,14 @@ class AccountManager(private val context: Context) {
                     "localDate" to workout.localDate,
                     "createdAt" to workout.createdAt
                 )
-                firestore.collection("users").document(userId)
+                currentFirestore.collection("users").document(userId)
                     .collection("workouts").document(workoutDocId)
                     .set(workoutMap, SetOptions.merge())
             }
 
             // 3. Fetch remote workouts (to pull workouts from other phones into local Room DB)
             val deferredFetch = CompletableDeferred<Boolean>()
-            firestore.collection("users").document(userId)
+            currentFirestore.collection("users").document(userId)
                 .collection("workouts")
                 .get()
                 .addOnSuccessListener { querySnapshot ->
@@ -325,7 +386,7 @@ class AccountManager(private val context: Context) {
             val updated = account.copy(isCloudSynced = true, lastSyncedAt = now)
             saveAccount(updated)
             _syncStatus.value = SyncStatus.Synced(now)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             val now = System.currentTimeMillis()
             _syncStatus.value = SyncStatus.Synced(now)
         }

@@ -48,9 +48,21 @@ fun ProfileScreen(
     val weightKg = profile?.weightKg ?: 70.0
     val heightCm = profile?.heightCm ?: 175.0
     val age = profile?.age ?: 25
-    val sex = CalorieCalculator.Sex.valueOf(profile?.biologicalSex ?: "MALE")
-    val activity = CalorieCalculator.ActivityLevel.valueOf(profile?.activityLevel ?: "MODERATE")
-    val goal = CalorieCalculator.FitnessGoal.valueOf(profile?.fitnessGoal ?: "GENERAL_FITNESS")
+    val sex = try {
+        CalorieCalculator.Sex.valueOf(profile?.biologicalSex ?: "MALE")
+    } catch (_: Throwable) {
+        CalorieCalculator.Sex.MALE
+    }
+    val activity = try {
+        CalorieCalculator.ActivityLevel.valueOf(profile?.activityLevel ?: "MODERATE")
+    } catch (_: Throwable) {
+        CalorieCalculator.ActivityLevel.MODERATE
+    }
+    val goal = try {
+        CalorieCalculator.FitnessGoal.valueOf(profile?.fitnessGoal ?: "GENERAL_FITNESS")
+    } catch (_: Throwable) {
+        CalorieCalculator.FitnessGoal.GENERAL_FITNESS
+    }
 
     val bmr = CalorieCalculator.calculateBmr(weightKg, heightCm, age, sex)
     val tdee = CalorieCalculator.calculateTdee(bmr, activity)

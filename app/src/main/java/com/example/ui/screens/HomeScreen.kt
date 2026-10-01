@@ -77,23 +77,39 @@ fun HomeScreen(
     val streakResult = StreakCalculator.calculateStreak(workoutDates)
 
     // BMR & Nutrition Targets
+    val safeSex = try {
+        CalorieCalculator.Sex.valueOf(profile?.biologicalSex ?: "MALE")
+    } catch (_: Throwable) {
+        CalorieCalculator.Sex.MALE
+    }
+    val safeActivity = try {
+        CalorieCalculator.ActivityLevel.valueOf(profile?.activityLevel ?: "MODERATE")
+    } catch (_: Throwable) {
+        CalorieCalculator.ActivityLevel.MODERATE
+    }
+    val safeGoal = try {
+        CalorieCalculator.FitnessGoal.valueOf(profile?.fitnessGoal ?: "GENERAL_FITNESS")
+    } catch (_: Throwable) {
+        CalorieCalculator.FitnessGoal.GENERAL_FITNESS
+    }
+
     val bmr = CalorieCalculator.calculateBmr(
         weightKg = profile?.weightKg ?: 70.0,
         heightCm = profile?.heightCm ?: 175.0,
         age = profile?.age ?: 25,
-        sex = CalorieCalculator.Sex.valueOf(profile?.biologicalSex ?: "MALE")
+        sex = safeSex
     )
     val tdee = CalorieCalculator.calculateTdee(
         bmr = bmr,
-        activityLevel = CalorieCalculator.ActivityLevel.valueOf(profile?.activityLevel ?: "MODERATE")
+        activityLevel = safeActivity
     )
     val targetCalories = CalorieCalculator.calculateTargetCalories(
         tdee = tdee,
-        goal = CalorieCalculator.FitnessGoal.valueOf(profile?.fitnessGoal ?: "GENERAL_FITNESS")
+        goal = safeGoal
     )
     val proteinRange = ProteinCalculator.calculateProteinRange(
         weightKg = profile?.weightKg ?: 70.0,
-        goal = CalorieCalculator.FitnessGoal.valueOf(profile?.fitnessGoal ?: "GENERAL_FITNESS")
+        goal = safeGoal
     )
 
     // Nutrition Totals Today

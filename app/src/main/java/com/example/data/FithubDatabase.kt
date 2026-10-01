@@ -164,13 +164,15 @@ abstract class FithubDatabase : RoomDatabase() {
                     FithubDatabase::class.java,
                     "fithub_database"
                 )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(true)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
                         CoroutineScope(Dispatchers.IO).launch {
-                            getDatabase(context).foodDao().insertFoodsIfMissing(SEED_FOODS)
-                            getDatabase(context).profileDao().upsertProfile(ProfileEntity())
+                            try {
+                                getDatabase(context).foodDao().insertFoodsIfMissing(SEED_FOODS)
+                                getDatabase(context).profileDao().upsertProfile(ProfileEntity())
+                            } catch (_: Throwable) {}
                         }
                     }
                 })
