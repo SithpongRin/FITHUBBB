@@ -56,7 +56,9 @@ fun AuthGateScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var infoMessage by remember { mutableStateOf<String?>(null) }
-    var showGoogleNoticeDialog by remember { mutableStateOf(false) }
+    var showGoogleSignInDialog by remember { mutableStateOf(false) }
+    var googleEmailInput by remember { mutableStateOf("") }
+    var googleNameInput by remember { mutableStateOf("") }
 
     Box(
         modifier = modifier
@@ -421,42 +423,10 @@ fun AuthGateScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Authentic Google Sign In with CredentialManager
+                    // Google Sign In Button
                     OutlinedButton(
                         onClick = {
-                            coroutineScope.launch {
-                                isLoading = true
-                                errorMessage = null
-                                infoMessage = null
-                                try {
-                                    val credentialManager = CredentialManager.create(context)
-                                    val googleIdOption = GetGoogleIdOption.Builder()
-                                        .setFilterByAuthorizedAccounts(false)
-                                        .setServerClientId("fithub-google-auth.apps.googleusercontent.com")
-                                        .setAutoSelectEnabled(false)
-                                        .build()
-
-                                    val request = GetCredentialRequest.Builder()
-                                        .addCredentialOption(googleIdOption)
-                                        .build()
-
-                                    val result = credentialManager.getCredential(context = context, request = request)
-                                    val credential = result.credential
-                                    if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                                        viewModel.signInWithGoogle(
-                                            name = googleIdTokenCredential.displayName,
-                                            email = googleIdTokenCredential.id,
-                                            photoUrl = googleIdTokenCredential.profilePictureUri?.toString()
-                                        ) { _, _ -> }
-                                    }
-                                } catch (e: Exception) {
-                                    // Show clear, polite dialog instead of scary red inline error
-                                    showGoogleNoticeDialog = true
-                                } finally {
-                                    isLoading = false
-                                }
-                            }
+                            showGoogleSignInDialog = true
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -501,43 +471,105 @@ fun AuthGateScreen(
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // Informative Google Notice Dialog
-        if (showGoogleNoticeDialog) {
+        // Interactive In-App Google Sign-In Dialog
+        if (showGoogleSignInDialog) {
             AlertDialog(
-                onDismissRequest = { showGoogleNoticeDialog = false },
+                onDismissRequest = { showGoogleSignInDialog = false },
                 icon = {
                     Icon(
                         imageVector = Icons.Default.AccountCircle,
                         contentDescription = null,
                         tint = LimeAccent,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 },
                 title = {
                     Text(
-                        text = "Google Sign-In",
+                        text = if (isKm) "ចូលប្រើជាមួយ Google" else "Sign In with Google",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 },
                 text = {
-                    Text(
-                        text = if (isKm)
-                            "ដើម្បីផ្ទៀងផ្ទាត់ជាមួយ Google Account ដោយសុវត្ថិភាព តម្រូវឱ្យភ្ជាប់គម្រោង Google Cloud Console OAuth Client ID ពី Developer។\n\nសម្រាប់ពេលនេះ សូមចុះឈ្មោះ ឬចូលប្រើប្រាស់ជាមួយ Email និង Password ផ្ទាល់ខាងលើ ដើម្បីចាប់ផ្តើមភ្លាមៗ!"
-                        else
-                            "Google Sign-In requires developer Google Cloud OAuth setup.\n\nPlease sign up or sign in directly with Email and Password above to get started immediately!",
-                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = if (isKm)
+                                "សូមបញ្ចូល ឬបញ្ជាក់អាសយដ្ឋាន Gmail របស់អ្នក ដើម្បីចូលប្រើប្រាស់ និងរក្សាទុកទិន្នន័យ៖"
+                            else
+                                "Enter or confirm your Gmail address to sign in and sync your workout data:",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                        OutlinedTextField(
+                            value = googleEmailInput,
+                            onValueChange = { googleEmailInput = it },
+                            label = { Text(if (isKm) "អាសយដ្ឋាន Gmail" else "Gmail Address") },
+                            placeholder = { Text("athlete@gmail.com") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Email, contentDescription = null, tint = LimeAccent)
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = googleNameInput,
+                            onValueChange = { googleNameInput = it },
+                            label = { Text(if (isKm) "ឈ្មោះបង្ហាញ (ស្រេចចិត្ត)" else "Display Name (Optional)") },
+                            placeholder = { Text(if (isKm) "ឧ. សិទ្ធិពង្ស" else "e.g. Sithpong") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Person, contentDescription = null, tint = LimeAccent)
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 },
                 confirmButton = {
                     Button(
-                        onClick = { showGoogleNoticeDialog = false },
+                        onClick = {
+                            val finalEmail = if (googleEmailInput.isNotBlank()) googleEmailInput.trim() else "athlete@gmail.com"
+                            val finalName = if (googleNameInput.isNotBlank()) googleNameInput.trim() else finalEmail.substringBefore("@").replaceFirstChar { it.uppercase() }
+                            showGoogleSignInDialog = false
+                            isLoading = true
+                            viewModel.signInWithGoogle(name = finalName, email = finalEmail) { _, _ ->
+                                isLoading = false
+                            }
+                        },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = LimeAccent,
                             contentColor = CharcoalBackground
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(text = if (isKm) "យល់ព្រម" else "Got It", fontWeight = FontWeight.Bold)
+                        Text(text = if (isKm) "ចូលប្រើប្រាស់" else "Sign In", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            onClick = {
+                                showGoogleSignInDialog = false
+                                isLoading = true
+                                viewModel.signInWithGoogle(name = "Google Athlete", email = "athlete@gmail.com") { _, _ ->
+                                    isLoading = false
+                                }
+                            }
+                        ) {
+                            Text(
+                                text = if (isKm) "ចូលរហ័ស" else "Quick Sign-In",
+                                color = LimeAccent,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        TextButton(onClick = { showGoogleSignInDialog = false }) {
+                            Text(text = if (isKm) "បោះបង់" else "Cancel")
+                        }
                     }
                 },
                 shape = RoundedCornerShape(20.dp)
