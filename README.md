@@ -1,5 +1,12 @@
 # FITHUB
 
+[![Build Android APK](https://github.com/SithpongRin/FITHUB/actions/workflows/build.yml/badge.svg)](https://github.com/SithpongRin/FITHUB/actions/workflows/build.yml)
+[![Download APK](https://img.shields.io/badge/Download-APK%20(v1.0.0)-brightgreen?logo=android)](https://github.com/SithpongRin/FITHUB/releases)
+
+**[📥 Click here to Download the latest Android APK](https://github.com/SithpongRin/FITHUB/releases)**
+
+---
+
 FITHUB is a production-grade, local-first personal fitness management application for Android built with Kotlin, Jetpack Compose, Room Database, and Material Design 3.
 
 ## Overview

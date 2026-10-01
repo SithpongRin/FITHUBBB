@@ -47,8 +47,8 @@ object UpdateManager {
     private val _updateStatus = MutableStateFlow<UpdateStatus>(UpdateStatus.Idle)
     val updateStatus: StateFlow<UpdateStatus> = _updateStatus.asStateFlow()
 
-    // Configurable endpoint for checking updates (e.g. GitHub raw JSON, custom server, or simulation)
-    var customUpdateUrl: String = ""
+    // Configurable endpoint for checking updates from GitHub raw JSON
+    var customUpdateUrl: String = "https://raw.githubusercontent.com/SithpongRin/FITHUB/main/version.json"
 
     suspend fun checkForUpdates(
         context: Context? = null,
