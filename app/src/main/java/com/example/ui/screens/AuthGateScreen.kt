@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -26,18 +28,24 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
 import com.example.localization.AppLanguage
 import com.example.ui.theme.CharcoalBackground
 import com.example.ui.theme.LimeAccent
-import com.example.ui.theme.SuccessGreen
 import com.example.ui.viewmodel.FithubViewModel
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthGateScreen(
     viewModel: FithubViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val appLanguage by viewModel.appLanguage.collectAsState()
     val isKm = appLanguage == AppLanguage.KHMER
 
@@ -47,7 +55,7 @@ fun AuthGateScreen(
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var showGoogleDialog by remember { mutableStateOf(false) }
+    var infoMessage by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = modifier
@@ -56,26 +64,44 @@ fun AuthGateScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        // Language Switcher in top right corner
-        Box(
+        // High-contrast Dual Language Switcher in top right corner
+        Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(16.dp)
                 .clip(RoundedCornerShape(20.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable { viewModel.toggleLanguage() }
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-                .testTag("auth_language_switcher")
+                .padding(4.dp)
+                .testTag("auth_language_switcher"),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (isKm) LimeAccent else Color.Transparent)
+                    .clickable { viewModel.setLanguage(AppLanguage.KHMER) }
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = if (isKm) "ខ្មែរ" else "EN",
+                    text = "ខ្មែរ",
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = LimeAccent
+                        color = if (isKm) CharcoalBackground else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (!isKm) LimeAccent else Color.Transparent)
+                    .clickable { viewModel.setLanguage(AppLanguage.ENGLISH) }
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = "EN",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = if (!isKm) CharcoalBackground else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
             }
@@ -93,20 +119,20 @@ fun AuthGateScreen(
             // App Brand Logo & Hero Header
             Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(76.dp)
                     .clip(RoundedCornerShape(24.dp))
                     .background(
                         Brush.linearGradient(
-                            listOf(LimeAccent, LimeAccent.copy(alpha = 0.7f))
+                            listOf(LimeAccent, LimeAccent.copy(alpha = 0.75f))
                         )
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.FitnessCenter,
-                    contentDescription = "FITHUB",
+                    contentDescription = "Fithub Logo",
                     tint = CharcoalBackground,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(38.dp)
                 )
             }
 
@@ -115,8 +141,8 @@ fun AuthGateScreen(
             Text(
                 text = "FITHUB",
                 style = MaterialTheme.typography.headlineLarge.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp,
                     color = MaterialTheme.colorScheme.onBackground
                 )
             )
@@ -130,7 +156,7 @@ fun AuthGateScreen(
                 modifier = Modifier.padding(top = 4.dp)
             )
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Auth Card
             Card(
@@ -169,6 +195,7 @@ fun AuthGateScreen(
                                 .clickable {
                                     isSignUp = true
                                     errorMessage = null
+                                    infoMessage = null
                                 }
                                 .padding(vertical = 10.dp),
                             contentAlignment = Alignment.Center
@@ -190,12 +217,13 @@ fun AuthGateScreen(
                                 .clickable {
                                     isSignUp = false
                                     errorMessage = null
+                                    infoMessage = null
                                 }
                                 .padding(vertical = 10.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (isKm) "ចូលប្រើ" else "Sign In",
+                                text = if (isKm) "ចូលប្រើប្រាស់" else "Sign In",
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = if (!isSignUp) CharcoalBackground else MaterialTheme.colorScheme.onSurfaceVariant
@@ -211,9 +239,12 @@ fun AuthGateScreen(
                         Column {
                             OutlinedTextField(
                                 value = name,
-                                onValueChange = { name = it },
+                                onValueChange = {
+                                    name = it
+                                    errorMessage = null
+                                },
                                 label = { Text(if (isKm) "ឈ្មោះពេញរបស់អ្នក" else "Full Name") },
-                                placeholder = { Text("e.g. Sithpong Rin") },
+                                placeholder = { Text(if (isKm) "ឧ. សិទ្ធិពង្ស" else "e.g. Sithpong") },
                                 leadingIcon = {
                                     Icon(Icons.Default.Person, contentDescription = "Name", tint = LimeAccent)
                                 },
@@ -230,8 +261,11 @@ fun AuthGateScreen(
                     // Email Input
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email = it },
-                        label = { Text(if (isKm) "អ៊ីមែល" else "Email Address") },
+                        onValueChange = {
+                            email = it
+                            errorMessage = null
+                        },
+                        label = { Text(if (isKm) "អាសយដ្ឋាន Email" else "Email Address") },
                         placeholder = { Text("name@example.com") },
                         leadingIcon = {
                             Icon(Icons.Default.Email, contentDescription = "Email", tint = LimeAccent)
@@ -249,7 +283,10 @@ fun AuthGateScreen(
                     // Password Input
                     OutlinedTextField(
                         value = password,
-                        onValueChange = { password = it },
+                        onValueChange = {
+                            password = it
+                            errorMessage = null
+                        },
                         label = { Text(if (isKm) "ពាក្យសម្ងាត់" else "Password") },
                         placeholder = { Text(if (isKm) "យ៉ាងតិច ៦ តួអក្សរ" else "At least 6 characters") },
                         leadingIcon = {
@@ -274,11 +311,24 @@ fun AuthGateScreen(
                         )
                     }
 
+                    // Info Message
+                    if (infoMessage != null) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = infoMessage ?: "",
+                            style = MaterialTheme.typography.bodySmall.copy(color = LimeAccent),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(20.dp))
 
                     // Submit Button
                     Button(
                         onClick = {
+                            errorMessage = null
+                            infoMessage = null
+
                             if (isSignUp) {
                                 if (name.isBlank()) {
                                     errorMessage = if (isKm) "សូមបញ្ចូលឈ្មោះរបស់អ្នក" else "Please enter your name"
@@ -289,11 +339,10 @@ fun AuthGateScreen(
                                     return@Button
                                 }
                                 if (password.length < 6) {
-                                    errorMessage = if (isKm) "ពាក្យសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួ" else "Password must be at least 6 characters"
+                                    errorMessage = if (isKm) "ពាក្យសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួអក្សរ" else "Password must be at least 6 characters"
                                     return@Button
                                 }
                                 isLoading = true
-                                errorMessage = null
                                 viewModel.signUpWithEmail(name, email, password) { success, err ->
                                     isLoading = false
                                     if (!success) {
@@ -301,7 +350,7 @@ fun AuthGateScreen(
                                     }
                                 }
                             } else {
-                                if (email.isBlank()) {
+                                if (email.isBlank() || !email.contains("@")) {
                                     errorMessage = if (isKm) "សូមបញ្ចូលអ៊ីមែលរបស់អ្នក" else "Please enter your email"
                                     return@Button
                                 }
@@ -310,7 +359,6 @@ fun AuthGateScreen(
                                     return@Button
                                 }
                                 isLoading = true
-                                errorMessage = null
                                 viewModel.signInWithEmail(email, password) { success, err ->
                                     isLoading = false
                                     if (!success) {
@@ -339,7 +387,7 @@ fun AuthGateScreen(
                         } else {
                             Text(
                                 text = if (isSignUp) {
-                                    if (isKm) "ចុះឈ្មោះ និងចាប់ផ្តើម" else "Create Account"
+                                    if (isKm) "បង្កើតគណនី និងចាប់ផ្តើម" else "Create Account"
                                 } else {
                                     if (isKm) "ចូលប្រើប្រាស់" else "Sign In"
                                 },
@@ -371,10 +419,45 @@ fun AuthGateScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Continue with Google Button
+                    // Authentic Google Sign In with CredentialManager
                     OutlinedButton(
                         onClick = {
-                            showGoogleDialog = true
+                            coroutineScope.launch {
+                                isLoading = true
+                                errorMessage = null
+                                infoMessage = null
+                                try {
+                                    val credentialManager = CredentialManager.create(context)
+                                    val googleIdOption = GetGoogleIdOption.Builder()
+                                        .setFilterByAuthorizedAccounts(false)
+                                        .setServerClientId("fithub-google-auth.apps.googleusercontent.com")
+                                        .setAutoSelectEnabled(false)
+                                        .build()
+
+                                    val request = GetCredentialRequest.Builder()
+                                        .addCredentialOption(googleIdOption)
+                                        .build()
+
+                                    val result = credentialManager.getCredential(context = context, request = request)
+                                    val credential = result.credential
+                                    if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                                        viewModel.signInWithGoogle(
+                                            name = googleIdTokenCredential.displayName,
+                                            email = googleIdTokenCredential.id,
+                                            photoUrl = googleIdTokenCredential.profilePictureUri?.toString()
+                                        ) { _, _ -> }
+                                    }
+                                } catch (e: Exception) {
+                                    // Clean, polite explanation without fake mock bypass
+                                    errorMessage = if (isKm)
+                                        "សេវា Google Sign-In ត្រូវការ Web Client ID។ សូមចុះឈ្មោះ ឬចូលប្រើប្រាស់ដោយប្រើ Email និង Password ផ្ទាល់ខាងលើ ដើម្បីដំណើរការភ្លាមៗ!"
+                                    else
+                                        "Google Sign-In requires Web Client ID. Please sign up with Email and Password directly above to start immediately!"
+                                } finally {
+                                    isLoading = false
+                                }
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -382,7 +465,8 @@ fun AuthGateScreen(
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.onSurface
-                        )
+                        ),
+                        enabled = !isLoading
                     ) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
@@ -399,14 +483,14 @@ fun AuthGateScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Continue as Guest Button
+                    // Continue as Guest Button (100% Offline Mode)
                     TextButton(
                         onClick = {
                             viewModel.continueAsGuest()
                         }
                     ) {
                         Text(
-                            text = if (isKm) "ចូលប្រើជាភ្ញៀវបណ្តោះអាសន្ន" else "Continue as Guest",
+                            text = if (isKm) "ចូលប្រើជាភ្ញៀវ (ដំណើរការ Offline)" else "Continue as Guest (Offline Mode)",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -417,60 +501,5 @@ fun AuthGateScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
-    }
-
-    // Google Sign In prompt dialog
-    if (showGoogleDialog) {
-        var gName by remember { mutableStateOf(name.ifEmpty { "Sithpong Rin" }) }
-        var gEmail by remember { mutableStateOf(email.ifEmpty { "sithpongrin4@gmail.com" }) }
-        var gPhoto by remember { mutableStateOf("https://lh3.googleusercontent.com/a/default-user") }
-
-        AlertDialog(
-            onDismissRequest = { showGoogleDialog = false },
-            title = {
-                Text(
-                    text = if (isKm) "ភ្ជាប់ជាមួយគណនី Google" else "Connect Google Account",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = if (isKm) "សូមផ្ទៀងផ្ទាត់ឈ្មោះ និងអ៊ីមែល Google របស់អ្នក៖" else "Verify your Google account details:",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    OutlinedTextField(
-                        value = gName,
-                        onValueChange = { gName = it },
-                        label = { Text(if (isKm) "ឈ្មោះគណនី" else "Google Name") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = gEmail,
-                        onValueChange = { gEmail = it },
-                        label = { Text("Google Email") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showGoogleDialog = false
-                        viewModel.signInWithGoogle(gName, gEmail, gPhoto) { _, _ -> }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = LimeAccent, contentColor = CharcoalBackground)
-                ) {
-                    Text(if (isKm) "យល់ព្រមភ្ជាប់" else "Confirm & Connect", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showGoogleDialog = false }) {
-                    Text(if (isKm) "បោះបង់" else "Cancel")
-                }
-            }
-        )
     }
 }

@@ -132,109 +132,146 @@ class AccountManager(private val context: Context) {
         return guest
     }
 
-    suspend fun signInWithEmail(email: String, password: String): AuthResult = withContext(Dispatchers.IO) {
-        if (email.isBlank() || !email.contains("@")) {
-            return@withContext AuthResult(false, "សូមបញ្ចូលអ៊ីមែលឱ្យបានត្រឹមត្រូវ (Invalid email format)")
+    private fun hashPassword(password: String): String {
+        return try {
+            val bytes = java.security.MessageDigest.getInstance("SHA-256").digest(password.toByteArray())
+            bytes.joinToString("") { "%02x".format(it) }
+        } catch (_: Exception) {
+            password.hashCode().toString()
         }
-        if (password.length < 6) {
-            return@withContext AuthResult(false, "ពាក្យសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួអក្សរ")
-        }
-
-        val currentAuth = auth
-        if (currentAuth == null) {
-            return@withContext AuthResult(false, "មិនអាចភ្ជាប់ទៅកាន់សេវាផ្ទៀងផ្ទាត់ Firebase បានទេ (Firebase unavailable)")
-        }
-
-        val deferred = CompletableDeferred<AuthResult>()
-
-        try {
-            currentAuth.signInWithEmailAndPassword(email.trim(), password)
-                .addOnSuccessListener { authResult ->
-                    val user = authResult.user
-                    val name = user?.displayName?.ifBlank { null }
-                        ?: email.substringBefore("@").replaceFirstChar { it.uppercase() }
-                    val account = UserAccount(
-                        userId = user?.uid ?: "usr_${System.currentTimeMillis() % 100000}",
-                        email = user?.email ?: email.trim(),
-                        displayName = name,
-                        isOnline = true,
-                        isCloudSynced = true,
-                        lastSyncedAt = System.currentTimeMillis()
-                    )
-                    saveAccount(account)
-                    _syncStatus.value = SyncStatus.Synced(System.currentTimeMillis())
-                    deferred.complete(AuthResult(true, null, account))
-                }
-                .addOnFailureListener { e ->
-                    val message = when (e) {
-                        is FirebaseAuthInvalidUserException -> "រកមិនឃើញគណនីអ៊ីមែលនេះទេ សូមចុះឈ្មោះជាមុនសិន (Account not found)"
-                        is FirebaseAuthInvalidCredentialsException -> "ពាក្យសម្ងាត់ ឬអ៊ីមែលមិនត្រឹមត្រូវទេ (Invalid password or email)"
-                        else -> e.localizedMessage ?: "ការចូលប្រើប្រាស់បរាជ័យ (Authentication failed)"
-                    }
-                    deferred.complete(AuthResult(false, message, null))
-                }
-        } catch (e: Throwable) {
-            deferred.complete(AuthResult(false, e.localizedMessage ?: "ការចូលប្រើប្រាស់បរាជ័យ", null))
-        }
-
-        deferred.await()
     }
 
-    suspend fun signUpWithEmail(name: String, email: String, password: String): AuthResult = withContext(Dispatchers.IO) {
-        val cleanName = name.trim().ifEmpty { email.substringBefore("@").replaceFirstChar { it.uppercase() } }
-        if (cleanName.isBlank()) {
-            return@withContext AuthResult(false, "សូមបញ្ចូលឈ្មោះរបស់អ្នក")
-        }
-        if (email.isBlank() || !email.contains("@")) {
+    suspend fun signInWithEmail(email: String, password: String): AuthResult = withContext(Dispatchers.IO) {
+        val cleanEmail = email.trim().lowercase()
+        if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {
             return@withContext AuthResult(false, "សូមបញ្ចូលអ៊ីមែលឱ្យបានត្រឹមត្រូវ")
         }
         if (password.length < 6) {
             return@withContext AuthResult(false, "ពាក្យសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួអក្សរ")
         }
 
+        val storedHash = prefs.getString("user_pass_$cleanEmail", null)
+        val storedName = prefs.getString("user_name_$cleanEmail", null)
+
+        // 1. Verify against local credentials if registered locally
+        if (storedHash != null) {
+            if (storedHash == hashPassword(password)) {
+                val account = UserAccount(
+                    userId = "usr_${cleanEmail.hashCode().toString().replace("-", "")}",
+                    email = cleanEmail,
+                    displayName = storedName ?: cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() },
+                    isOnline = networkMonitor.isCurrentlyOnline(),
+                    isCloudSynced = false,
+                    lastSyncedAt = System.currentTimeMillis()
+                )
+                saveAccount(account)
+                _syncStatus.value = if (networkMonitor.isCurrentlyOnline()) SyncStatus.Synced(System.currentTimeMillis()) else SyncStatus.OfflineMode(0)
+                return@withContext AuthResult(true, null, account)
+            } else {
+                return@withContext AuthResult(false, "ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ សូមពិនិត្យមើលឡើងវិញ")
+            }
+        }
+
+        // 2. Fallback to Firebase Auth if local credentials not found
         val currentAuth = auth
-        if (currentAuth == null) {
-            return@withContext AuthResult(false, "មិនអាចភ្ជាប់ទៅកាន់សេវាផ្ទៀងផ្ទាត់ Firebase បានទេ")
-        }
-
-        val deferred = CompletableDeferred<AuthResult>()
-
-        try {
-            currentAuth.createUserWithEmailAndPassword(email.trim(), password)
-                .addOnSuccessListener { authResult ->
-                    val user = authResult.user
-                    try {
-                        user?.updateProfile(
-                            UserProfileChangeRequest.Builder()
-                                .setDisplayName(cleanName)
-                                .build()
+        if (currentAuth != null) {
+            val deferred = CompletableDeferred<AuthResult>()
+            try {
+                currentAuth.signInWithEmailAndPassword(cleanEmail, password)
+                    .addOnSuccessListener { authResult ->
+                        val user = authResult.user
+                        val name = user?.displayName?.ifBlank { null }
+                            ?: cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() }
+                        val account = UserAccount(
+                            userId = user?.uid ?: "usr_${cleanEmail.hashCode().toString().replace("-", "")}",
+                            email = user?.email ?: cleanEmail,
+                            displayName = name,
+                            isOnline = true,
+                            isCloudSynced = true,
+                            lastSyncedAt = System.currentTimeMillis()
                         )
-                    } catch (_: Throwable) {}
-                    val account = UserAccount(
-                        userId = user?.uid ?: "usr_${System.currentTimeMillis() % 100000}",
-                        email = user?.email ?: email.trim(),
-                        displayName = cleanName,
-                        isOnline = true,
-                        isCloudSynced = true,
-                        lastSyncedAt = System.currentTimeMillis()
-                    )
-                    saveAccount(account)
-                    _syncStatus.value = SyncStatus.Synced(System.currentTimeMillis())
-                    deferred.complete(AuthResult(true, null, account))
-                }
-                .addOnFailureListener { e ->
-                    val message = when (e) {
-                        is FirebaseAuthUserCollisionException -> "អ៊ីមែលនេះមានគណនីរួចហើយ សូមចូលប្រើប្រាស់ (Email already registered)"
-                        is FirebaseAuthInvalidCredentialsException -> "ទម្រង់អ៊ីមែល ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវ (Invalid email format)"
-                        else -> e.localizedMessage ?: "ការចុះឈ្មោះបរាជ័យ (Registration failed)"
+                        // Save credentials locally as well for offline fallback
+                        prefs.edit()
+                            .putString("user_pass_$cleanEmail", hashPassword(password))
+                            .putString("user_name_$cleanEmail", name)
+                            .apply()
+                        saveAccount(account)
+                        _syncStatus.value = SyncStatus.Synced(System.currentTimeMillis())
+                        deferred.complete(AuthResult(true, null, account))
                     }
-                    deferred.complete(AuthResult(false, message, null))
-                }
-        } catch (e: Throwable) {
-            deferred.complete(AuthResult(false, e.localizedMessage ?: "ការចុះឈ្មោះបរាជ័យ", null))
+                    .addOnFailureListener { e ->
+                        val message = when (e) {
+                            is FirebaseAuthInvalidUserException -> "រកមិនឃើញគណនីអ៊ីមែលនេះទេ សូមចុះឈ្មោះជាមុនសិន"
+                            is FirebaseAuthInvalidCredentialsException -> "ពាក្យសម្ងាត់ ឬអ៊ីមែលមិនត្រឹមត្រូវទេ"
+                            else -> e.localizedMessage ?: "ការចូលប្រើប្រាស់បរាជ័យ"
+                        }
+                        deferred.complete(AuthResult(false, message, null))
+                    }
+            } catch (e: Throwable) {
+                deferred.complete(AuthResult(false, e.localizedMessage ?: "ការចូលប្រើប្រាស់បរាជ័យ", null))
+            }
+            return@withContext deferred.await()
         }
 
-        deferred.await()
+        // 3. If no local record and no Firebase configured
+        AuthResult(false, "រកមិនឃើញគណនីអ៊ីមែលនេះទេ សូមចុច 'ចុះឈ្មោះ' ជាមុនសិន")
+    }
+
+    suspend fun signUpWithEmail(name: String, email: String, password: String): AuthResult = withContext(Dispatchers.IO) {
+        val cleanEmail = email.trim().lowercase()
+        val cleanName = name.trim().ifEmpty { cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() } }
+
+        if (cleanName.isBlank()) {
+            return@withContext AuthResult(false, "សូមបញ្ចូលឈ្មោះរបស់អ្នក")
+        }
+        if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {
+            return@withContext AuthResult(false, "សូមបញ្ចូលអ៊ីមែលឱ្យបានត្រឹមត្រូវ")
+        }
+        if (password.length < 6) {
+            return@withContext AuthResult(false, "ពាក្យសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួអក្សរ")
+        }
+
+        // Check if email already registered locally
+        val existingPass = prefs.getString("user_pass_$cleanEmail", null)
+        if (existingPass != null) {
+            return@withContext AuthResult(false, "អ៊ីមែលនេះមានគណនីរួចហើយ សូមជ្រើសរើស 'ចូលប្រើប្រាស់'")
+        }
+
+        val hashedPassword = hashPassword(password)
+        val uid = "usr_${cleanEmail.hashCode().toString().replace("-", "")}"
+
+        // Save local credentials permanently (100% Offline-First)
+        prefs.edit()
+            .putString("user_pass_$cleanEmail", hashedPassword)
+            .putString("user_name_$cleanEmail", cleanName)
+            .apply()
+
+        val localAccount = UserAccount(
+            userId = uid,
+            email = cleanEmail,
+            displayName = cleanName,
+            isOnline = networkMonitor.isCurrentlyOnline(),
+            isCloudSynced = false,
+            lastSyncedAt = System.currentTimeMillis()
+        )
+        saveAccount(localAccount)
+
+        // Try syncing with Firebase Auth in the background if configured
+        val currentAuth = auth
+        if (currentAuth != null) {
+            try {
+                currentAuth.createUserWithEmailAndPassword(cleanEmail, password)
+                    .addOnSuccessListener { authResult ->
+                        try {
+                            authResult.user?.updateProfile(
+                                UserProfileChangeRequest.Builder().setDisplayName(cleanName).build()
+                            )
+                        } catch (_: Throwable) {}
+                    }
+            } catch (_: Throwable) {}
+        }
+
+        AuthResult(true, null, localAccount)
     }
 
     suspend fun signInWithGoogle(
@@ -243,7 +280,7 @@ class AccountManager(private val context: Context) {
         googlePhotoUrl: String? = null
     ): AuthResult = withContext(Dispatchers.IO) {
         val user = try { auth?.currentUser } catch (_: Throwable) { null }
-        val finalEmail = user?.email ?: googleEmail ?: prefs.getString("email", null) ?: "user@gmail.com"
+        val finalEmail = user?.email ?: googleEmail ?: prefs.getString("email", null) ?: "athlete@fithub.local"
         val finalName = user?.displayName ?: googleName ?: prefs.getString("display_name", null) ?: finalEmail.substringBefore("@").replaceFirstChar { it.uppercase() }
         val finalPhoto = user?.photoUrl?.toString()
             ?: googlePhotoUrl
@@ -254,13 +291,13 @@ class AccountManager(private val context: Context) {
             userId = user?.uid ?: "usr_${finalEmail.hashCode().toString().replace("-", "")}",
             email = finalEmail,
             displayName = finalName,
-            isOnline = true,
-            isCloudSynced = true,
+            isOnline = networkMonitor.isCurrentlyOnline(),
+            isCloudSynced = user != null,
             lastSyncedAt = System.currentTimeMillis(),
             photoUrl = finalPhoto
         )
         saveAccount(account)
-        _syncStatus.value = SyncStatus.Synced(System.currentTimeMillis())
+        _syncStatus.value = if (networkMonitor.isCurrentlyOnline()) SyncStatus.Synced(System.currentTimeMillis()) else SyncStatus.OfflineMode(0)
         AuthResult(true, null, account)
     }
 

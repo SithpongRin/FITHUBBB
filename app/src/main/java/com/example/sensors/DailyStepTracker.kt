@@ -86,13 +86,13 @@ class DailyStepTracker(
             } else if (stepDetectorSensor != null) {
                 manager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_UI)
             } else if (accelerometerSensor != null) {
-                manager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_GAME)
+                manager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_NORMAL)
             }
         } catch (_: SecurityException) {
             // Runtime permission not granted yet, try fallback to accelerometer
             try {
                 if (accelerometerSensor != null) {
-                    manager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_GAME)
+                    manager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_NORMAL)
                 }
             } catch (_: Throwable) {}
         } catch (_: Throwable) {}

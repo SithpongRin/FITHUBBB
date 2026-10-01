@@ -419,7 +419,7 @@ object Localization {
         StringKey.SESSION_RESUME to "បន្ត",
         StringKey.SESSION_FINISH to "បញ្ចប់",
         StringKey.SESSION_CANCEL to "បោះបង់",
-        StringKey.PACE to "ល្បឿនជាមធ្យម",
+        StringKey.PACE to "ល្បឿនកំណត់ (Pace)",
         StringKey.CURRENT_PACE to "ល្បឿនបច្ចុប្បន្ន",
         StringKey.AVG_PACE to "ល្បឿនមធ្យម",
         StringKey.SPEED to "ល្បឿន",

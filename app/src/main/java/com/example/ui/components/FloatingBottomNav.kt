@@ -85,10 +85,8 @@ fun FloatingBottomNav(
         Row(
             modifier = Modifier
                 .shadow(
-                    elevation = 20.dp,
-                    shape = RoundedCornerShape(36.dp),
-                    ambientColor = if (isDark) LimeAccent.copy(alpha = 0.15f) else Color.Black.copy(alpha = 0.12f),
-                    spotColor = if (isDark) Color.Black.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.25f)
+                    elevation = 8.dp,
+                    shape = RoundedCornerShape(36.dp)
                 )
                 .clip(RoundedCornerShape(36.dp))
                 .background(navContainerColor)
@@ -104,11 +102,8 @@ fun FloatingBottomNav(
             items.forEach { item ->
                 val isSelected = item.tab == selectedTab
                 val scale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.05f else 1.0f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
-                    ),
+                    targetValue = if (isSelected) 1.02f else 1.0f,
+                    animationSpec = androidx.compose.animation.core.tween(100),
                     label = "tab_scale"
                 )
 

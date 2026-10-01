@@ -85,13 +85,10 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .padding(innerPadding)
                         ) {
-                            AnimatedContent(
+                            Crossfade(
                                 targetState = currentTab,
-                                transitionSpec = {
-                                    fadeIn(animationSpec = tween(140)) togetherWith
-                                    fadeOut(animationSpec = tween(120))
-                                },
-                                label = "tab_animated_content"
+                                animationSpec = tween(120),
+                                label = "tab_crossfade"
                             ) { tab ->
                                 when (tab) {
                                     ScreenTab.HOME -> HomeScreen(
