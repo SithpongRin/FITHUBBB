@@ -82,9 +82,9 @@ class DailyStepTracker(
         try {
             // Prefer hardware low-power step counter
             if (stepCounterSensor != null) {
-                manager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_UI)
+                manager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_NORMAL)
             } else if (stepDetectorSensor != null) {
-                manager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_UI)
+                manager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_NORMAL)
             } else if (accelerometerSensor != null) {
                 manager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_NORMAL)
             }

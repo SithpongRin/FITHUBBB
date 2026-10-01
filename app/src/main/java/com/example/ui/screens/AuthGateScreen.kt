@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,12 +54,13 @@ fun AuthGateScreen(
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var infoMessage by remember { mutableStateOf<String?>(null) }
-    var showGoogleSignInDialog by remember { mutableStateOf(false) }
-    var googleEmailInput by remember { mutableStateOf("") }
-    var googleNameInput by remember { mutableStateOf("") }
+    var showGoogleAuthInfoDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -296,7 +298,16 @@ fun AuthGateScreen(
                         leadingIcon = {
                             Icon(Icons.Default.Lock, contentDescription = "Password", tint = LimeAccent)
                         },
-                        visualTransformation = PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true,
                         modifier = Modifier
@@ -304,6 +315,41 @@ fun AuthGateScreen(
                             .testTag("auth_password_input"),
                         shape = RoundedCornerShape(14.dp)
                     )
+
+                    // Confirm Password (for sign up)
+                    AnimatedVisibility(visible = isSignUp) {
+                        Column {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedTextField(
+                                value = confirmPassword,
+                                onValueChange = {
+                                    confirmPassword = it
+                                    errorMessage = null
+                                },
+                                label = { Text(if (isKm) "បញ្ជាក់ពាក្យសម្ងាត់" else "Confirm Password") },
+                                placeholder = { Text(if (isKm) "បញ្ចូលពាក្យសម្ងាត់ម្តងទៀត" else "Re-enter password") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.LockReset, contentDescription = "Confirm", tint = LimeAccent)
+                                },
+                                trailingIcon = {
+                                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                        Icon(
+                                            imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                            contentDescription = if (confirmPasswordVisible) "Hide" else "Show",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                },
+                                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("auth_confirm_password_input"),
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                        }
+                    }
 
                     // Error Message
                     if (errorMessage != null) {
@@ -344,6 +390,10 @@ fun AuthGateScreen(
                                 }
                                 if (password.length < 6) {
                                     errorMessage = if (isKm) "ពាក្យសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួអក្សរ" else "Password must be at least 6 characters"
+                                    return@Button
+                                }
+                                if (password != confirmPassword) {
+                                    errorMessage = if (isKm) "ពាក្យសម្ងាត់ទាំងពីរមិនដូចគ្នាទេ សូមពិនិត្យឡើងវិញ" else "Passwords do not match. Please verify."
                                     return@Button
                                 }
                                 isLoading = true
@@ -391,9 +441,9 @@ fun AuthGateScreen(
                         } else {
                             Text(
                                 text = if (isSignUp) {
-                                    if (isKm) "បង្កើតគណនី និងចាប់ផ្តើម" else "Create Account"
+                                    if (isKm) "ចុះឈ្មោះ និងបង្កើតគណនី" else "Sign Up & Create Account"
                                 } else {
-                                    if (isKm) "ចូលប្រើប្រាស់" else "Sign In"
+                                    if (isKm) "ផ្ទៀងផ្ទាត់ និងចូលប្រើប្រាស់" else "Authenticate & Sign In"
                                 },
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                             )
@@ -423,10 +473,10 @@ fun AuthGateScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Google Sign In Button
+                    // Google Authentication Button
                     OutlinedButton(
                         onClick = {
-                            showGoogleSignInDialog = true
+                            showGoogleAuthInfoDialog = true
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -449,127 +499,49 @@ fun AuthGateScreen(
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Continue as Guest Button (100% Offline Mode)
-                    TextButton(
-                        onClick = {
-                            viewModel.continueAsGuest()
-                        }
-                    ) {
-                        Text(
-                            text = if (isKm) "ចូលប្រើជាភ្ញៀវ (ដំណើរការ Offline)" else "Continue as Guest (Offline Mode)",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
-                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // Interactive In-App Google Sign-In Dialog
-        if (showGoogleSignInDialog) {
+        // Informative Authentication Dialog
+        if (showGoogleAuthInfoDialog) {
             AlertDialog(
-                onDismissRequest = { showGoogleSignInDialog = false },
+                onDismissRequest = { showGoogleAuthInfoDialog = false },
                 icon = {
                     Icon(
-                        imageVector = Icons.Default.AccountCircle,
+                        imageVector = Icons.Default.Security,
                         contentDescription = null,
                         tint = LimeAccent,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                 },
                 title = {
                     Text(
-                        text = if (isKm) "ចូលប្រើជាមួយ Google" else "Sign In with Google",
+                        text = if (isKm) "ការផ្ទៀងផ្ទាត់គណនី (Authentication)" else "Account Authentication",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 },
                 text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = if (isKm)
-                                "សូមបញ្ចូល ឬបញ្ជាក់អាសយដ្ឋាន Gmail របស់អ្នក ដើម្បីចូលប្រើប្រាស់ និងរក្សាទុកទិន្នន័យ៖"
-                            else
-                                "Enter or confirm your Gmail address to sign in and sync your workout data:",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
-                        OutlinedTextField(
-                            value = googleEmailInput,
-                            onValueChange = { googleEmailInput = it },
-                            label = { Text(if (isKm) "អាសយដ្ឋាន Gmail" else "Gmail Address") },
-                            placeholder = { Text("athlete@gmail.com") },
-                            leadingIcon = {
-                                Icon(Icons.Default.Email, contentDescription = null, tint = LimeAccent)
-                            },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        OutlinedTextField(
-                            value = googleNameInput,
-                            onValueChange = { googleNameInput = it },
-                            label = { Text(if (isKm) "ឈ្មោះបង្ហាញ (ស្រេចចិត្ត)" else "Display Name (Optional)") },
-                            placeholder = { Text(if (isKm) "ឧ. សិទ្ធិពង្ស" else "e.g. Sithpong") },
-                            leadingIcon = {
-                                Icon(Icons.Default.Person, contentDescription = null, tint = LimeAccent)
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                    Text(
+                        text = if (isKm)
+                            "ដើម្បីធានាសុវត្ថិភាពទិន្នន័យផ្ទាល់ខ្លួន និងការផ្ទៀងផ្ទាត់ពិតប្រាកដ សូមចុះឈ្មោះ ឬចូលប្រើប្រាស់ជាមួយ Email និង Password របស់អ្នកនៅខាងលើ។\n\nរាល់គណនីទាំងអស់សុទ្ធតែត្រូវបានផ្ទៀងផ្ទាត់ពាក្យសម្ងាត់យ៉ាងត្រឹមត្រូវជានិច្ច!"
+                        else
+                            "For personal data security and verified identity, please sign up or sign in directly with your Email and Password above.\n\nAll accounts require strict credential verification!",
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
+                    )
                 },
                 confirmButton = {
                     Button(
-                        onClick = {
-                            val finalEmail = if (googleEmailInput.isNotBlank()) googleEmailInput.trim() else "athlete@gmail.com"
-                            val finalName = if (googleNameInput.isNotBlank()) googleNameInput.trim() else finalEmail.substringBefore("@").replaceFirstChar { it.uppercase() }
-                            showGoogleSignInDialog = false
-                            isLoading = true
-                            viewModel.signInWithGoogle(name = finalName, email = finalEmail) { _, _ ->
-                                isLoading = false
-                            }
-                        },
+                        onClick = { showGoogleAuthInfoDialog = false },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = LimeAccent,
                             contentColor = CharcoalBackground
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(text = if (isKm) "ចូលប្រើប្រាស់" else "Sign In", fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(
-                            onClick = {
-                                showGoogleSignInDialog = false
-                                isLoading = true
-                                viewModel.signInWithGoogle(name = "Google Athlete", email = "athlete@gmail.com") { _, _ ->
-                                    isLoading = false
-                                }
-                            }
-                        ) {
-                            Text(
-                                text = if (isKm) "ចូលរហ័ស" else "Quick Sign-In",
-                                color = LimeAccent,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        TextButton(onClick = { showGoogleSignInDialog = false }) {
-                            Text(text = if (isKm) "បោះបង់" else "Cancel")
-                        }
+                        Text(text = if (isKm) "យល់ព្រម" else "Got It", fontWeight = FontWeight.Bold)
                     }
                 },
                 shape = RoundedCornerShape(20.dp)

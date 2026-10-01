@@ -105,23 +105,17 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .padding(innerPadding)
                         ) {
-                            Crossfade(
-                                targetState = currentTab,
-                                animationSpec = tween(120),
-                                label = "tab_crossfade"
-                            ) { tab ->
-                                when (tab) {
-                                    ScreenTab.HOME -> HomeScreen(
-                                        viewModel = viewModel,
-                                        onOpenSleepDialog = { showSleepDialog = true },
-                                        onOpenProfile = { viewModel.currentTab.value = ScreenTab.PROFILE }
-                                    )
-                                    ScreenTab.WORKOUT -> WorkoutScreen(viewModel = viewModel)
-                                    ScreenTab.PLANS -> PlansScreen(viewModel = viewModel)
-                                    ScreenTab.PROGRESS -> ProgressScreen(viewModel = viewModel)
-                                    ScreenTab.PROFILE -> ProfileScreen(viewModel = viewModel)
-                                    ScreenTab.SETTINGS -> SettingsScreen(viewModel = viewModel)
-                                }
+                            when (currentTab) {
+                                ScreenTab.HOME -> HomeScreen(
+                                    viewModel = viewModel,
+                                    onOpenSleepDialog = { showSleepDialog = true },
+                                    onOpenProfile = { viewModel.currentTab.value = ScreenTab.PROFILE }
+                                )
+                                ScreenTab.WORKOUT -> WorkoutScreen(viewModel = viewModel)
+                                ScreenTab.PLANS -> PlansScreen(viewModel = viewModel)
+                                ScreenTab.PROGRESS -> ProgressScreen(viewModel = viewModel)
+                                ScreenTab.PROFILE -> ProfileScreen(viewModel = viewModel)
+                                ScreenTab.SETTINGS -> SettingsScreen(viewModel = viewModel)
                             }
 
                             // Floating Island Nav pinned cleanly above bottom

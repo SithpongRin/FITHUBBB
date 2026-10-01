@@ -36,13 +36,18 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace
+    - name: Build Optimized Release APK
+      run: ./gradlew assembleRelease --stacktrace
 
     - name: Prepare Fithub APK
       run: |
         mkdir -p build-release
-        cp app/build/outputs/apk/debug/*.apk build-release/Fithub.apk
+        if ls app/build/outputs/apk/release/*.apk 1> /dev/null 2>&1; then
+          cp app/build/outputs/apk/release/*.apk build-release/Fithub.apk
+        else
+          ./gradlew assembleDebug --stacktrace
+          cp app/build/outputs/apk/debug/*.apk build-release/Fithub.apk
+        fi
         ls -lh build-release/
 
     - name: Upload APK Artifact
