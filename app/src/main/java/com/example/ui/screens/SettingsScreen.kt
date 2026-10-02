@@ -617,6 +617,27 @@ fun SettingsScreen(
                                 }
                             }
                         }
+                        is UpdateStatus.Error -> {
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                        Text(
+                                            text = if (appLanguage.code == "km") "មិនអាចពិនិត្យកំណែថ្មីបានទេ" else "Update Check Failed",
+                                            style = MaterialTheme.typography.titleSmall.copy(color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                                        )
+                                    }
+                                    Text(
+                                        text = status.message,
+                                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onErrorContainer)
+                                    )
+                                }
+                            }
+                        }
                         else -> {
                             Text(
                                 text = "Direct APK auto-update enabled (Option 2)",

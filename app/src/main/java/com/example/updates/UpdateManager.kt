@@ -129,15 +129,21 @@ object UpdateManager {
                         return@withContext
                     } else {
                         conn.disconnect()
-                        break
+                        _updateStatus.value = UpdateStatus.Error(
+                            if (code == 404)
+                                "HTTP 404: មិនអាចទាញយក version.json បានទេ។ សូមប្រាកដថា GitHub Repository FITHUBBB ត្រូវបានកំណត់ជា Public។"
+                            else
+                                "HTTP Error $code ពេលពិនិត្យកំណែថ្មី។"
+                        )
+                        return@withContext
                     }
                 }
             } catch (e: Exception) {
-                // Fallback to up-to-date or error
+                _updateStatus.value = UpdateStatus.Error("កំហុសបណ្តាញ៖ ${e.localizedMessage ?: "មិនអាចភ្ជាប់ទៅកាន់ GitHub បានទេ"}")
+                return@withContext
             }
         }
 
-        // Default: If no server URL is configured, report up to date
         _updateStatus.value = UpdateStatus.UpToDate
     }
 
