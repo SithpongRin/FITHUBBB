@@ -4,7 +4,7 @@
   "passwordHash": "",
   "displayName": "Sithpongrin4",
   "photoUrl": "https:\/\/api.dicebear.com\/7.x\/initials\/png?seed=Sithpongrin4&backgroundColor=c6ff00&textColor=121212",
-  "updatedAt": 1790949297751,
+  "updatedAt": 1790949954996,
   "profile": {
     "fullName": "ក្តីពិ ស",
     "age": 21,
@@ -17,6 +17,23 @@
     "updatedAt": 1790949240611
   },
   "workouts": [
+    {
+      "id": "ab471572-3a8f-4191-a49d-b59f4bc70698",
+      "type": "JUMPING",
+      "startTime": 1790949903598,
+      "endTime": 1790949954353,
+      "durationSeconds": 50,
+      "caloriesBurned": 2.559714285714286,
+      "distanceMeters": 0,
+      "averagePaceSecPerKm": 0,
+      "jumpCount": 17,
+      "totalVolumeKg": 0,
+      "totalReps": 0,
+      "localDate": "2026-10-02",
+      "notes": "General Health",
+      "createdAt": 1790949954354,
+      "updatedAt": 1790949954354
+    },
     {
       "id": "2786ce0a-c5eb-4527-948f-2352e4c35a03",
       "type": "JUMPING",
@@ -91,11 +108,11 @@
   "dailySteps": [
     {
       "localDate": "2026-10-02",
-      "stepCount": 2300,
+      "stepCount": 2347,
       "goalSteps": 8000,
-      "distanceMeters": 1752.6000000000001,
-      "caloriesBurned": 96.60000000000001,
-      "updatedAt": 1790949137786
+      "distanceMeters": 1788.414,
+      "caloriesBurned": 98.57400000000001,
+      "updatedAt": 1790949753019
     }
   ]
 }
