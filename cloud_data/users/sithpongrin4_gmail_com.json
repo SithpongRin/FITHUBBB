@@ -4,7 +4,7 @@
   "passwordHash": "",
   "displayName": "Sithpongrin4",
   "photoUrl": "https:\/\/api.dicebear.com\/7.x\/initials\/png?seed=Sithpongrin4&backgroundColor=c6ff00&textColor=121212",
-  "updatedAt": 1790939999976,
+  "updatedAt": 1790940507537,
   "profile": {
     "fullName": "Sithpongrin4",
     "age": 21,
@@ -74,11 +74,11 @@
   "dailySteps": [
     {
       "localDate": "2026-10-02",
-      "stepCount": 1638,
+      "stepCount": 1691,
       "goalSteps": 8000,
-      "distanceMeters": 1248.156,
-      "caloriesBurned": 68.796,
-      "updatedAt": 1790938531990
+      "distanceMeters": 1288.542,
+      "caloriesBurned": 71.022,
+      "updatedAt": 1790939999356
     }
   ]
 }
