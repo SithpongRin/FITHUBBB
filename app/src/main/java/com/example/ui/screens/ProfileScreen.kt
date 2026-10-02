@@ -449,6 +449,8 @@ fun ProfileScreen(
         var activityInput by remember { mutableStateOf(profile?.activityLevel ?: "MODERATE") }
         var goalInput by remember { mutableStateOf(profile?.fitnessGoal ?: "GENERAL_FITNESS") }
 
+        val isKm = viewModel.appLanguage.collectAsState().value.code == "km"
+
         ModalBottomSheet(
             onDismissRequest = { showEditProfileDialog = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -463,15 +465,16 @@ fun ProfileScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
                     .padding(bottom = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Edit Biometrics",
+                        text = if (isKm) "កែប្រែព័ត៌មានរាងកាយ" else "Edit Biometrics",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                     IconButton(onClick = { showEditProfileDialog = false }) {
@@ -479,216 +482,369 @@ fun ProfileScreen(
                     }
                 }
 
+                // Full Name
                 OutlinedTextField(
                     value = nameInput,
                     onValueChange = { nameInput = it },
                     label = { Text(viewModel.str(StringKey.FULL_NAME)) },
                     singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Interactive Biometric Steppers Card (Zero typing required)
+                // Unified Biometrics Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Age Stepper
+                        // Age Row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
-                                Text(
-                                    text = viewModel.str(StringKey.AGE),
-                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                )
-                                Text(
-                                    text = "$ageVal yrs",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
-                                )
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { if (ageVal > 12) ageVal-- },
-                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(LimeAccent.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.Remove, contentDescription = "Decrease Age", tint = MaterialTheme.colorScheme.onSurface)
+                                    Icon(Icons.Default.CalendarToday, contentDescription = null, tint = LimeAccent, modifier = Modifier.size(18.dp))
                                 }
-                                IconButton(
-                                    onClick = { if (ageVal < 100) ageVal++ },
-                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(LimeAccent)
+                                Column {
+                                    Text(
+                                        text = viewModel.str(StringKey.AGE),
+                                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    )
+                                    Text(
+                                        text = if (isKm) "$ageVal ឆ្នាំ" else "$ageVal yrs",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    )
+                                }
+                            }
+
+                            // Symmetrical Age Stepper
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.padding(4.dp)
                                 ) {
-                                    Icon(Icons.Default.Add, contentDescription = "Increase Age", tint = CharcoalBackground)
+                                    IconButton(
+                                        onClick = { if (ageVal > 12) ageVal-- },
+                                        modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Icon(Icons.Default.Remove, contentDescription = "Decrease Age", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
+                                    }
+                                    Text(
+                                        text = "$ageVal",
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = LimeAccent),
+                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                    )
+                                    IconButton(
+                                        onClick = { if (ageVal < 100) ageVal++ },
+                                        modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Increase Age", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
+                                    }
                                 }
                             }
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
-                        // Height Stepper
+                        // Height Row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
-                                Text(
-                                    text = viewModel.str(StringKey.HEIGHT),
-                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                )
-                                Text(
-                                    text = "$heightVal cm",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(LimeAccent.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Height, contentDescription = null, tint = LimeAccent, modifier = Modifier.size(18.dp))
+                                }
+                                Column {
+                                    Text(
+                                        text = viewModel.str(StringKey.HEIGHT),
+                                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    )
+                                    Text(
+                                        text = "$heightVal cm",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    )
+                                }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { if (heightVal > 100) heightVal -= 1 },
-                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
+
+                            // Balanced Height Stepper Capsule
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                    modifier = Modifier.padding(3.dp)
                                 ) {
-                                    Icon(Icons.Default.Remove, contentDescription = "Decrease Height", tint = MaterialTheme.colorScheme.onSurface)
-                                }
-                                Button(
-                                    onClick = { if (heightVal > 105) heightVal -= 5 },
-                                    contentPadding = PaddingValues(horizontal = 6.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
-                                    modifier = Modifier.height(34.dp)
-                                ) {
-                                    Text("-5", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Button(
-                                    onClick = { if (heightVal < 235) heightVal += 5 },
-                                    contentPadding = PaddingValues(horizontal = 6.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
-                                    modifier = Modifier.height(34.dp)
-                                ) {
-                                    Text("+5", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                                IconButton(
-                                    onClick = { if (heightVal < 240) heightVal += 1 },
-                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(LimeAccent)
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = "Increase Height", tint = CharcoalBackground)
+                                    IconButton(
+                                        onClick = { if (heightVal > 100) heightVal -= 1 },
+                                        modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
+                                    }
+
+                                    Surface(
+                                        onClick = { if (heightVal > 105) heightVal -= 5 },
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                    ) {
+                                        Text(
+                                            text = "-5",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 6.dp)
+                                        )
+                                    }
+
+                                    Surface(
+                                        onClick = { if (heightVal < 235) heightVal += 5 },
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                    ) {
+                                        Text(
+                                            text = "+5",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 6.dp)
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = { if (heightVal < 240) heightVal += 1 },
+                                        modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Increase", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
+                                    }
                                 }
                             }
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
-                        // Weight Stepper
+                        // Weight Row
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
-                                Text(
-                                    text = viewModel.str(StringKey.WEIGHT),
-                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                )
-                                Text(
-                                    text = String.format(java.util.Locale.US, "%.1f kg", weightVal),
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(LimeAccent.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.MonitorWeight, contentDescription = null, tint = LimeAccent, modifier = Modifier.size(18.dp))
+                                }
+                                Column {
+                                    Text(
+                                        text = viewModel.str(StringKey.WEIGHT),
+                                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    )
+                                    Text(
+                                        text = String.format(java.util.Locale.US, "%.1f kg", weightVal),
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    )
+                                }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { if (weightVal > 30.0) weightVal = (Math.round((weightVal - 0.5) * 10.0)) / 10.0 },
-                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
+
+                            // Balanced Weight Stepper Capsule
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                    modifier = Modifier.padding(3.dp)
                                 ) {
-                                    Icon(Icons.Default.Remove, contentDescription = "Decrease Weight", tint = MaterialTheme.colorScheme.onSurface)
-                                }
-                                Button(
-                                    onClick = { if (weightVal > 32.0) weightVal = (Math.round((weightVal - 2.0) * 10.0)) / 10.0 },
-                                    contentPadding = PaddingValues(horizontal = 6.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
-                                    modifier = Modifier.height(34.dp)
-                                ) {
-                                    Text("-2", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Button(
-                                    onClick = { if (weightVal < 248.0) weightVal = (Math.round((weightVal + 2.0) * 10.0)) / 10.0 },
-                                    contentPadding = PaddingValues(horizontal = 6.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface),
-                                    modifier = Modifier.height(34.dp)
-                                ) {
-                                    Text("+2", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                                IconButton(
-                                    onClick = { if (weightVal < 250.0) weightVal = (Math.round((weightVal + 0.5) * 10.0)) / 10.0 },
-                                    modifier = Modifier.size(34.dp).clip(CircleShape).background(LimeAccent)
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = "Increase Weight", tint = CharcoalBackground)
+                                    IconButton(
+                                        onClick = { if (weightVal > 30.0) weightVal = (Math.round((weightVal - 0.5) * 10.0)) / 10.0 },
+                                        modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
+                                    }
+
+                                    Surface(
+                                        onClick = { if (weightVal > 32.0) weightVal = (Math.round((weightVal - 2.0) * 10.0)) / 10.0 },
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                    ) {
+                                        Text(
+                                            text = "-2",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 6.dp)
+                                        )
+                                    }
+
+                                    Surface(
+                                        onClick = { if (weightVal < 248.0) weightVal = (Math.round((weightVal + 2.0) * 10.0)) / 10.0 },
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                    ) {
+                                        Text(
+                                            text = "+2",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 6.dp)
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = { if (weightVal < 250.0) weightVal = (Math.round((weightVal + 0.5) * 10.0)) / 10.0 },
+                                        modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Increase", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                Text("Sex", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf("MALE", "FEMALE", "OTHER").forEach { s ->
-                        FilterChip(
-                            selected = sexInput == s,
-                            onClick = { sexInput = s },
-                            label = { Text(s, maxLines = 1, softWrap = false) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = LimeAccent,
-                                selectedLabelColor = CharcoalBackground
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
+                // Sex Segmented Control
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = if (isKm) "ភេទ (Sex)" else "Sex",
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val sexOptions = listOf(
+                                "MALE" to (if (isKm) "ប្រុស" else "MALE"),
+                                "FEMALE" to (if (isKm) "ស្រី" else "FEMALE"),
+                                "OTHER" to (if (isKm) "ផ្សេងទៀត" else "OTHER")
+                            )
+                            sexOptions.forEach { (key, label) ->
+                                val isSelected = sexInput == key
+                                Surface(
+                                    onClick = { sexInput = key },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) LimeAccent else Color.Transparent,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier.padding(vertical = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelMedium.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) CharcoalBackground else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
-                Text("Training Goal", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(
-                        "GENERAL_FITNESS" to "General",
-                        "BUILD_STRENGTH" to "Strength",
-                        "WEIGHT_MANAGEMENT" to "Weight"
-                    ).forEach { (g, label) ->
-                        FilterChip(
-                            selected = goalInput == g,
-                            onClick = { goalInput = g },
-                            label = { Text(label, maxLines = 1, softWrap = false) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = LimeAccent,
-                                selectedLabelColor = CharcoalBackground
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
+                // Training Goal Segmented Control
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = if (isKm) "គោលដៅហាត់ប្រាណ" else "Training Goal",
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val goalOptions = listOf(
+                                "GENERAL_FITNESS" to (if (isKm) "ទូទៅ" else "General"),
+                                "BUILD_STRENGTH" to (if (isKm) "កម្លាំង" else "Strength"),
+                                "WEIGHT_MANAGEMENT" to (if (isKm) "សម្រកទម្ងន់" else "Weight")
+                            )
+                            goalOptions.forEach { (key, label) ->
+                                val isSelected = goalInput == key
+                                Surface(
+                                    onClick = { goalInput = key },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) LimeAccent else Color.Transparent,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier.padding(vertical = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelMedium.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) CharcoalBackground else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
+                // Bottom Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedButton(
+                    Button(
                         onClick = { showEditProfileDialog = false },
-                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Cancel", maxLines = 1, softWrap = false)
+                        Text(if (isKm) "បោះបង់" else "Cancel", maxLines = 1, softWrap = false)
                     }
 
                     Button(
@@ -708,10 +864,10 @@ fun ProfileScreen(
                             containerColor = LimeAccent,
                             contentColor = CharcoalBackground
                         ),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Save", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                        Text(if (isKm) "រក្សាទុក" else "Save", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                     }
                 }
             }
