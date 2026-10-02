@@ -337,7 +337,9 @@ fun JumpRopeConfigDialog(
                 if (targetType == JumpRopeTargetType.REPS) {
                     // Quick Reps Chips
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(100, 300, 500, 1000).forEach { presetReps ->
@@ -399,7 +401,9 @@ fun JumpRopeConfigDialog(
                 } else {
                     // Time Mode: Quick Duration Chips
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(60 to "1m", 120 to "2m", 180 to "3m", 300 to "5m").forEach { (secs, label) ->
@@ -564,21 +568,30 @@ fun JumpRopeConfigDialog(
                         }
                     }
 
-                    // Quick Rest Chips
+                    // Quick Rest Chips (horizontally scrollable without squishing or wrapping)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(15, 30, 45, 60, 90, 120).forEach { rSec ->
                             val isSel = restDurationSeconds == rSec
                             AssistChip(
                                 onClick = { restDurationSeconds = rSec },
-                                label = { Text("${rSec}s", fontSize = 11.sp) },
+                                label = {
+                                    Text(
+                                        text = "${rSec}s",
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                },
                                 colors = AssistChipDefaults.assistChipColors(
                                     containerColor = if (isSel) WarningAmber else MaterialTheme.colorScheme.surfaceVariant,
                                     labelColor = if (isSel) CharcoalBackground else MaterialTheme.colorScheme.onSurface
                                 ),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(10.dp)
                             )
                         }
                     }
@@ -701,8 +714,9 @@ fun JumpRopeConfigDialog(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(top = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedButton(
                     onClick = onDismiss,
@@ -714,7 +728,12 @@ fun JumpRopeConfigDialog(
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
-                    Text(if (isKm) "បោះបង់" else "Cancel", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = if (isKm) "បោះបង់" else "Cancel",
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
 
                 Button(
@@ -734,20 +753,23 @@ fun JumpRopeConfigDialog(
                         onStartWorkout()
                     },
                     modifier = Modifier
-                        .weight(1.5f)
+                        .weight(1.85f)
                         .height(52.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = LimeAccent,
                         contentColor = CharcoalBackground
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = if (isKm) "ចាប់ផ្តើមលោត" else "Start Jump Rope",
                         fontWeight = FontWeight.Black,
-                        fontSize = 15.sp
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }

@@ -1,7 +1,9 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -357,7 +359,12 @@ fun SettingsScreen(
                         text = "${viewModel.str(StringKey.JR_REST_TITLE)}: ${jrConfig.restDurationSeconds}s",
                         style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     )
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         listOf(15, 30, 45, 60, 90).forEach { rest ->
                             FilterChip(
                                 selected = jrConfig.restDurationSeconds == rest,
@@ -373,7 +380,12 @@ fun SettingsScreen(
                         text = "${viewModel.str(StringKey.JR_ROUNDS_TITLE)}: ${jrConfig.rounds}",
                         style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     )
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         listOf(1, 3, 5, 8, 10).forEach { r ->
                             FilterChip(
                                 selected = jrConfig.rounds == r,

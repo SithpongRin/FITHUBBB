@@ -41,22 +41,28 @@ sealed class UpdateStatus {
 
 object UpdateManager {
 
-    const val CURRENT_VERSION_NAME = "1.1.2"
-    const val CURRENT_VERSION_CODE = 13
+    const val CURRENT_VERSION_NAME = "1.1.3"
+    const val CURRENT_VERSION_CODE = 14
 
     private val _updateStatus = MutableStateFlow<UpdateStatus>(UpdateStatus.Idle)
     val updateStatus: StateFlow<UpdateStatus> = _updateStatus.asStateFlow()
 
-    // Primary endpoint: raw githubusercontent; Fallback: GitHub API
-    var customUpdateUrl: String = "https://raw.githubusercontent.com/SithpongRin/FITHUBBB/main/version.json"
+    // Primary endpoint: jsDelivr fast CDN / raw githubusercontent; Fallback: GitHub API
+    var customUpdateUrl: String = "https://cdn.jsdelivr.net/gh/SithpongRin/FITHUBBB@main/version.json"
+    private const val GITHUB_RAW_URL = "https://raw.githubusercontent.com/SithpongRin/FITHUBBB/main/version.json"
     private const val GITHUB_API_URL = "https://api.github.com/repos/SithpongRin/FITHUBBB/contents/version.json"
 
     suspend fun checkForUpdates(
         context: Context? = null,
         forceSimulateAvailable: Boolean = false
     ) = withContext(Dispatchers.IO) {
+        val currentStatus = _updateStatus.value
+        if (!forceSimulateAvailable && (currentStatus is UpdateStatus.Available || currentStatus is UpdateStatus.Downloading || currentStatus is UpdateStatus.ReadyToInstall)) {
+            return@withContext
+        }
+
         _updateStatus.value = UpdateStatus.Checking
-        kotlinx.coroutines.delay(600)
+        kotlinx.coroutines.delay(400)
 
         if (forceSimulateAvailable) {
             _updateStatus.value = UpdateStatus.Available(
@@ -70,10 +76,10 @@ object UpdateManager {
             return@withContext
         }
 
-        // Try primary raw URL first, then jsDelivr CDN, then fallback to GitHub API
+        // Try fast jsDelivr CDN first, then raw GitHub endpoints, then fallback to GitHub API
         val candidateUrls = listOf(
             customUpdateUrl,
-            "https://cdn.jsdelivr.net/gh/SithpongRin/FITHUBBB@main/version.json",
+            GITHUB_RAW_URL,
             "https://raw.githubusercontent.com/SithpongRin/FITHUBBB/refs/heads/main/version.json"
         )
 
