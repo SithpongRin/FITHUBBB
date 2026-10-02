@@ -506,12 +506,16 @@ class AccountManager(private val context: Context) {
 
             val pushSuccess = CloudSyncService.pushUserData(fullPayload)
 
-            // 6. Optional Firestore sync fallback if configured
+            // 6. Direct Cloud Firestore Sync
             val currentFirestore = firestore
             if (currentFirestore != null) {
                 try {
+                    val userDocRef = currentFirestore.collection("users").document(account.userId)
                     val profileMap = hashMapOf(
-                        "fullName" to account.displayName,
+                        "userId" to account.userId,
+                        "email" to account.email,
+                        "displayName" to account.displayName,
+                        "photoUrl" to (account.photoUrl ?: ""),
                         "age" to localProfile.age,
                         "biologicalSex" to localProfile.biologicalSex,
                         "heightCm" to localProfile.heightCm,
@@ -520,9 +524,75 @@ class AccountManager(private val context: Context) {
                         "activityLevel" to localProfile.activityLevel,
                         "updatedAt" to System.currentTimeMillis()
                     )
-                    currentFirestore.collection("users").document(account.userId)
-                        .set(profileMap, SetOptions.merge())
-                } catch (_: Throwable) {}
+                    userDocRef.set(profileMap, SetOptions.merge())
+
+                    // Sync Workouts
+                    for (w in mergedWorkoutsMap.values) {
+                        val wMap = hashMapOf(
+                            "id" to w.id,
+                            "type" to w.type,
+                            "startTime" to w.startTime,
+                            "endTime" to w.endTime,
+                            "durationSeconds" to w.durationSeconds,
+                            "caloriesBurned" to w.caloriesBurned,
+                            "distanceMeters" to w.distanceMeters,
+                            "jumpCount" to w.jumpCount,
+                            "totalVolumeKg" to w.totalVolumeKg,
+                            "totalReps" to w.totalReps,
+                            "localDate" to w.localDate,
+                            "notes" to w.notes
+                        )
+                        userDocRef.collection("workouts").document(w.id).set(wMap, SetOptions.merge())
+                    }
+
+                    // Sync Nutrition
+                    for (n in mergedNutMap.values) {
+                        val nMap = hashMapOf(
+                            "id" to n.id,
+                            "localDate" to n.localDate,
+                            "mealType" to n.mealType,
+                            "foodName" to n.foodName,
+                            "grams" to n.grams,
+                            "calories" to n.calories,
+                            "protein" to n.protein,
+                            "carbs" to n.carbs,
+                            "fat" to n.fat,
+                            "completed" to n.completed
+                        )
+                        userDocRef.collection("nutrition").document(n.id).set(nMap, SetOptions.merge())
+                    }
+
+                    // Sync Sleep
+                    for (s in mergedSleepMap.values) {
+                        val sMap = hashMapOf(
+                            "id" to s.id,
+                            "localDate" to s.localDate,
+                            "durationMinutes" to s.durationMinutes,
+                            "bedtime" to s.bedtime,
+                            "wakeTime" to s.wakeTime,
+                            "qualityRating" to s.qualityRating
+                        )
+                        userDocRef.collection("sleep").document(s.id).set(sMap, SetOptions.merge())
+                    }
+
+                    // Sync Daily Steps
+                    if (localTodaySteps != null) {
+                        val stepMap = hashMapOf(
+                            "localDate" to localTodaySteps.localDate,
+                            "stepCount" to localTodaySteps.stepCount,
+                            "goalSteps" to localTodaySteps.goalSteps,
+                            "caloriesBurned" to localTodaySteps.caloriesBurned,
+                            "distanceMeters" to localTodaySteps.distanceMeters
+                        )
+                        userDocRef.collection("daily_steps").document(localTodaySteps.localDate).set(stepMap, SetOptions.merge())
+                    }
+
+                    android.util.Log.d("FithubFirestore", "Successfully synced user data and collections to Cloud Firestore!")
+                } catch (e: Throwable) {
+                    android.util.Log.w("FithubFirestore", "Firestore sync failed (check google-services.json and security rules): ${e.message}")
+                }
+            } else {
+                android.util.Log.i("FithubFirestore", "Firestore instance is null. Ensure google-services.json is in app/ directory.")
             }
 
             val now = System.currentTimeMillis()

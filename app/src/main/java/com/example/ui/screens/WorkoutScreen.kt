@@ -300,30 +300,35 @@ fun WorkoutIdleView(
                     }
 
                     // Luxury Sport Feature Pills
-                    Row(
+                    @OptIn(ExperimentalLayoutApi::class)
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         val tags = when (type) {
-                            "RUNNING" -> listOf("GPS Track", "Pace Engine", "Cardio METs")
+                            "RUNNING" -> listOf("GPS Route", "Pace Engine", "Cardio MET")
                             "WALKING" -> listOf("Step Cadence", "Distance", "Low Impact")
-                            "JUMPING" -> listOf("Hardware Sensor", "100% Calorie Calibrated", "Jump Cadence")
-                            else -> listOf("Tonnage Volume", "Reps & Sets", "Auto Rest Timer")
+                            "JUMPING" -> listOf("Sensor Counter", "Calibrated", "Cadence JPM")
+                            else -> listOf("Tonnage Volume", "Reps & Sets", "Rest Timer")
                         }
                         tags.forEach { tag ->
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+                                    .border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
                                     text = tag,
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 10.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                        fontWeight = FontWeight.SemiBold
+                                    ),
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
@@ -509,7 +514,8 @@ fun ActiveSessionView(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(32.dp))
                             .testTag("jump_counter_card"),
-                        colors = CardDefaults.cardColors(containerColor = LimeAccent)
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, LimeAccent.copy(alpha = 0.5f))
                     ) {
                         Column(
                             modifier = Modifier
@@ -528,20 +534,20 @@ fun ActiveSessionView(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(CharcoalBackground.copy(alpha = 0.12f))
+                                        .background(LimeAccent.copy(alpha = 0.15f))
                                         .padding(horizontal = 10.dp, vertical = 6.dp)
                                 ) {
                                     Box(
                                         modifier = Modifier
                                             .size(8.dp)
                                             .clip(CircleShape)
-                                            .background(CharcoalBackground)
+                                            .background(LimeAccent)
                                     )
                                     Text(
                                         text = viewModel.str(StringKey.JUMP_COUNT),
                                         style = MaterialTheme.typography.labelMedium.copy(
                                             fontWeight = FontWeight.Bold,
-                                            color = CharcoalBackground
+                                            color = LimeAccent
                                         )
                                     )
                                 }
@@ -552,7 +558,8 @@ fun ActiveSessionView(
                                         showCalibrateDialog = true
                                     },
                                     shape = RoundedCornerShape(14.dp),
-                                    color = CharcoalBackground.copy(alpha = 0.15f)
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, LimeAccent.copy(alpha = 0.3f))
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -562,14 +569,14 @@ fun ActiveSessionView(
                                         Icon(
                                             imageVector = Icons.Default.Tune,
                                             contentDescription = "Calibrate",
-                                            tint = CharcoalBackground,
+                                            tint = LimeAccent,
                                             modifier = Modifier.size(15.dp)
                                         )
                                         Text(
                                             text = if (isKm) "ក្រិត Sensor" else "Calibrate",
                                             style = MaterialTheme.typography.labelSmall.copy(
                                                 fontWeight = FontWeight.Bold,
-                                                color = CharcoalBackground
+                                                color = LimeAccent
                                             ),
                                             maxLines = 1
                                         )
@@ -585,7 +592,7 @@ fun ActiveSessionView(
                                 style = MaterialTheme.typography.displayLarge.copy(
                                     fontSize = 76.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = CharcoalBackground,
+                                    color = LimeAccent,
                                     letterSpacing = (-2).sp
                                 )
                             )
@@ -594,7 +601,7 @@ fun ActiveSessionView(
                                 text = if (isKm) "ចំនួនលោតសរុប (Jumps)" else "Total Jumps Counted",
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     fontWeight = FontWeight.SemiBold,
-                                    color = CharcoalBackground.copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             )
 
@@ -603,7 +610,8 @@ fun ActiveSessionView(
                             // Centered, Symmetrical Stepper Capsule
                             Surface(
                                 shape = RoundedCornerShape(24.dp),
-                                color = CharcoalBackground.copy(alpha = 0.12f)
+                                color = MaterialTheme.colorScheme.surface,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -614,8 +622,8 @@ fun ActiveSessionView(
                                         onClick = { jumpDetector.manualDecrement() },
                                         modifier = Modifier.size(38.dp),
                                         colors = IconButtonDefaults.filledIconButtonColors(
-                                            containerColor = CharcoalBackground,
-                                            contentColor = Color.White
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            contentColor = MaterialTheme.colorScheme.onSurface
                                         )
                                     ) {
                                         Icon(
@@ -629,7 +637,7 @@ fun ActiveSessionView(
                                         text = if (isKm) "កែសម្រួលដោយដៃ" else "Manual Adjust",
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontWeight = FontWeight.Bold,
-                                            color = CharcoalBackground
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                     )
 
@@ -637,8 +645,8 @@ fun ActiveSessionView(
                                         onClick = { jumpDetector.manualIncrement() },
                                         modifier = Modifier.size(38.dp),
                                         colors = IconButtonDefaults.filledIconButtonColors(
-                                            containerColor = CharcoalBackground,
-                                            contentColor = Color.White
+                                            containerColor = LimeAccent,
+                                            contentColor = CharcoalBackground
                                         )
                                     ) {
                                         Icon(
@@ -764,7 +772,8 @@ fun ActiveSessionView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 if (activeWorkout.isPaused) {
                     Button(
@@ -774,13 +783,24 @@ fun ActiveSessionView(
                             contentColor = CharcoalBackground
                         ),
                         shape = RoundedCornerShape(16.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                         modifier = Modifier
                             .weight(1f)
+                            .height(52.dp)
                             .testTag("button_resume_workout")
                     ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Resume")
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(viewModel.str(StringKey.SESSION_RESUME), fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Resume",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = viewModel.str(StringKey.SESSION_RESUME),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false
+                        )
                     }
                 } else {
                     Button(
@@ -790,13 +810,24 @@ fun ActiveSessionView(
                             contentColor = CharcoalBackground
                         ),
                         shape = RoundedCornerShape(16.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                         modifier = Modifier
                             .weight(1f)
+                            .height(52.dp)
                             .testTag("button_pause_workout")
                     ) {
-                        Icon(Icons.Default.Pause, contentDescription = "Pause")
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(viewModel.str(StringKey.SESSION_PAUSE), fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = Icons.Default.Pause,
+                            contentDescription = "Pause",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = viewModel.str(StringKey.SESSION_PAUSE),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false
+                        )
                     }
                 }
 
@@ -816,28 +847,39 @@ fun ActiveSessionView(
                         contentColor = CharcoalBackground
                     ),
                     shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                     modifier = Modifier
                         .weight(1f)
+                        .height(52.dp)
                         .testTag("button_finish_workout")
                 ) {
-                    Icon(Icons.Default.Check, contentDescription = "Finish")
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(viewModel.str(StringKey.SESSION_FINISH), fontWeight = FontWeight.Bold)
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Finish",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = viewModel.str(StringKey.SESSION_FINISH),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
 
-                IconButton(
+                FilledIconButton(
                     onClick = { viewModel.cancelWorkout() },
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .size(52.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
                         .testTag("button_cancel_workout")
                 ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Cancel",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                    Icon(Icons.Default.Close, contentDescription = "Cancel")
                 }
             }
         }

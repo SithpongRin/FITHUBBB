@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.WorkoutScheduleEntity
+import com.example.data.WorkoutPlanEntity
 import com.example.localization.AppLanguage
 import com.example.localization.StringKey
 import com.example.ui.theme.CharcoalBackground
@@ -44,6 +45,7 @@ fun PlansScreen(
 
     var showGenerateDialog by remember { mutableStateOf(false) }
     var showAddScheduleDialog by remember { mutableStateOf(false) }
+    var selectedPlanForDetails by remember { mutableStateOf<WorkoutPlanEntity?>(null) }
 
     LazyColumn(
         modifier = modifier
@@ -326,60 +328,253 @@ fun PlansScreen(
             }
         } else {
             items(allPlans) { plan ->
+                val (categoryIcon, categoryColor, categoryLabel) = when {
+                    plan.name.contains("Kun Khmer", ignoreCase = true) || plan.goal == "ENDURANCE" ->
+                        Triple(Icons.Default.Bolt, Color(0xFFFFAB00), if (isKm) "ក្បាច់គុន & កម្លាំង" else "Combat & Cardio")
+                    plan.name.contains("HIIT", ignoreCase = true) || plan.goal == "GENERAL_FITNESS" ->
+                        Triple(Icons.Default.LocalFireDepartment, Color(0xFFFF5252), if (isKm) "ដុតជាតិខ្លាញ់ខ្ពស់" else "HIIT Shred")
+                    else ->
+                        Triple(Icons.Default.FitnessCenter, LimeAccent, if (isKm) "កសាងសាច់ដុំ" else "Hypertrophy")
+                }
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp)),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        .clip(RoundedCornerShape(24.dp))
+                        .clickable { selectedPlanForDetails = plan },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    border = androidx.compose.foundation.BorderStroke(1.2.dp, categoryColor.copy(alpha = 0.4f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
+                        // Top Header: Category Icon + Title + Frequency Pill
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.Top
                         ) {
-                            Text(
-                                text = plan.name,
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                            )
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(categoryColor.copy(alpha = 0.16f))
+                                        .border(1.dp, categoryColor.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = categoryIcon,
+                                        contentDescription = null,
+                                        tint = categoryColor,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = plan.name,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = (-0.3).sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    )
+                                    Text(
+                                        text = categoryLabel,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = categoryColor,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.5.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(LimeAccent.copy(alpha = 0.2f))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(LimeAccent)
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
                             ) {
                                 Text(
-                                    text = if (isKm) "${plan.daysPerWeek} ថ្ងៃ/សប្តាហ៍" else "${plan.daysPerWeek} Days/Week",
+                                    text = if (isKm) "${plan.daysPerWeek} ថ្ងៃ/សប្តាហ៍" else "${plan.daysPerWeek} Days/Wk",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = LimeAccent
+                                        fontWeight = FontWeight.Black,
+                                        color = CharcoalBackground,
+                                        fontSize = 10.5.sp
                                     )
                                 )
                             }
                         }
 
-                        Text(
-                            text = if (isKm) "គោលដៅ៖ ${plan.goal.replace("_", " ")}" else "Goal: ${plan.goal.replace("_", " ")}",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        )
-
+                        // Spec Pills Row: Duration, Equipment, Target Focus
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.padding(top = 4.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = if (isKm) "~${plan.sessionMinutes} នាទី/ថ្ងៃ" else "~${plan.sessionMinutes} mins/session",
-                                style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            )
-                            Text(
-                                text = plan.equipment.replace("_", " "),
-                                style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            )
+                            // Duration Pill
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Timer,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "~${plan.sessionMinutes} ${if (isKm) "នាទី" else "min"}",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 10.5.sp
+                                    ),
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+
+                            // Equipment Pill
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FitnessCenter,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = when (plan.equipment) {
+                                        "BODYWEIGHT" -> if (isKm) "គ្មានសម្ភារៈ" else "Bodyweight"
+                                        "DUMBBELLS_ONLY" -> if (isKm) "ដុំដែកដៃ" else "Dumbbells"
+                                        else -> if (isKm) "Full Gym" else "Full Gym"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 10.5.sp
+                                    ),
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+
+                            // Goal Pill
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.TrackChanges,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = when (plan.goal) {
+                                        "STRENGTH" -> if (isKm) "កម្លាំង" else "Strength"
+                                        "ENDURANCE" -> if (isKm) "ស៊ូទ្រាំ" else "Endurance"
+                                        else -> if (isKm) "ដុតខ្លាញ់" else "Fat Loss"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 10.5.sp
+                                    ),
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
+
+                        // Action Buttons: View Details & Start Routine
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(
+                                onClick = { selectedPlanForDetails = plan },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Default.FormatListBulleted, contentDescription = null, modifier = Modifier.size(16.dp), tint = LimeAccent)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isKm) "មើលលំហាត់" else "View Exercises",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
+                                )
+                            }
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(
+                                    onClick = { viewModel.deletePlan(plan) },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.DeleteOutline,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                Button(
+                                    onClick = {
+                                        val workoutType = when {
+                                            plan.name.contains("Kun Khmer", ignoreCase = true) -> "WEIGHTLIFTING"
+                                            plan.name.contains("HIIT", ignoreCase = true) -> "WEIGHTLIFTING"
+                                            plan.equipment == "BODYWEIGHT" -> "WEIGHTLIFTING"
+                                            else -> "WEIGHTLIFTING"
+                                        }
+                                        viewModel.startWorkout(workoutType)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = LimeAccent,
+                                        contentColor = CharcoalBackground
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (isKm) "ចាប់ផ្តើម" else "Start",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -893,5 +1088,126 @@ fun PlansScreen(
                 }
             }
         )
+    }
+
+    // Interactive Plan Exercise Breakdown Modal
+    selectedPlanForDetails?.let { plan ->
+        val exercisesFlow = remember(plan.id) { viewModel.getExercisesForPlan(plan.id) }
+        val planExercises by exercisesFlow.collectAsState(initial = emptyList())
+
+        ModalBottomSheet(
+            onDismissRequest = { selectedPlanForDetails = null },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = { BottomSheetDefaults.DragHandle(color = LimeAccent.copy(alpha = 0.6f)) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = plan.name,
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black)
+                        )
+                        Text(
+                            text = "${plan.daysPerWeek} ${if (isKm) "ថ្ងៃ/សប្តាហ៍" else "Days/Wk"} • ~${plan.sessionMinutes} ${if (isKm) "នាទី" else "min"}",
+                            style = MaterialTheme.typography.bodySmall.copy(color = LimeAccent, fontWeight = FontWeight.Bold)
+                        )
+                    }
+                    IconButton(onClick = { selectedPlanForDetails = null }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+
+                if (planExercises.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = if (isKm) "មិនមានបញ្ជីលំហាត់ជាក់លាក់ទេ។ អាចចាប់ផ្តើមបានភ្លាមៗ។" else "Dynamic program routine. Ready to launch.",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        )
+                    }
+                } else {
+                    Text(
+                        text = if (isKm) "បញ្ជីលំហាត់ក្នុងគម្រោង (${planExercises.size} លំហាត់)៖" else "Exercises (${planExercises.size} exercises):",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(planExercises) { ex ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = ex.name,
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                                        )
+                                        Text(
+                                            text = "${ex.sets} Sets × ${ex.reps} Reps" + if (ex.weightKg > 0) " • ${ex.weightKg} kg" else "",
+                                            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(LimeAccent.copy(alpha = 0.18f))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "${ex.restSeconds}s rest",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = LimeAccent)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        selectedPlanForDetails = null
+                        val workoutType = when {
+                            plan.name.contains("Kun Khmer", ignoreCase = true) -> "WEIGHTLIFTING"
+                            plan.name.contains("HIIT", ignoreCase = true) -> "WEIGHTLIFTING"
+                            else -> "WEIGHTLIFTING"
+                        }
+                        viewModel.startWorkout(workoutType)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = LimeAccent, contentColor = CharcoalBackground),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isKm) "ចាប់ផ្តើមហាត់តាមគម្រោងនេះ" else "Start This Routine",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
     }
 }

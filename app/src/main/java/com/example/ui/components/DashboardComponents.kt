@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.scale
 import com.example.ui.theme.*
 
 @Composable
@@ -33,6 +34,7 @@ fun WalkingActivityHeroCard(
     streakDays: Int,
     isKm: Boolean = true,
     isTrackingEnabled: Boolean = true,
+    onToggleTracking: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse_anim")
@@ -66,9 +68,9 @@ fun WalkingActivityHeroCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(22.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
-            // Header Row: Title + Live Status Badge + Streak
+            // Header Row: Left [Icon + Title + Live Dot] | Right [Streak + Integrated Sensor Switch]
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -80,46 +82,100 @@ fun WalkingActivityHeroCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isTrackingEnabled) LimeAccent.copy(alpha = pulseAlpha)
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                            )
-                    )
-                    Text(
-                        text = if (isKm) "ការដើរប្រចាំថ្ងៃ" else "Daily Walking",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            letterSpacing = 0.5.sp
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(LimeAccent.copy(alpha = 0.16f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DirectionsWalk,
+                            contentDescription = "Walking",
+                            tint = LimeAccent,
+                            modifier = Modifier.size(20.dp)
                         )
-                    )
+                    }
+
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = if (isKm) "ការដើរប្រចាំថ្ងៃ" else "Daily Walking",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    letterSpacing = (-0.2).sp
+                                )
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isTrackingEnabled) LimeAccent.copy(alpha = pulseAlpha)
+                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                    )
+                            )
+                        }
+                        Text(
+                            text = if (isTrackingEnabled) {
+                                if (isKm) "Sensor ដំណើរការ 24/7" else "Sensor active 24/7"
+                            } else {
+                                if (isKm) "បានផ្អាក Sensor" else "Sensor paused"
+                            },
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
                 }
 
-                // Streak Badge
+                // Right: Integrated 24/7 Auto Toggle Switch + Streak
                 Row(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(LimeAccent.copy(alpha = 0.18f))
-                        .border(1.dp, LimeAccent.copy(alpha = 0.4f), CircleShape)
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Bolt,
-                        contentDescription = "Streak",
-                        tint = LimeAccent,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "$streakDays ${if (isKm) "ថ្ងៃ" else "Days"}",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = LimeAccent
+                    // Streak Badge
+                    Row(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(1.dp, LimeAccent.copy(alpha = 0.35f), CircleShape)
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = "Streak",
+                            tint = LimeAccent,
+                            modifier = Modifier.size(13.dp)
                         )
-                    )
+                        Text(
+                            text = "$streakDays ${if (isKm) "ថ្ងៃ" else "d"}",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = LimeAccent,
+                                fontSize = 10.5.sp
+                            )
+                        )
+                    }
+
+                    if (onToggleTracking != null) {
+                        Switch(
+                            checked = isTrackingEnabled,
+                            onCheckedChange = onToggleTracking,
+                            modifier = Modifier.scale(0.85f).testTag("card_daily_steps"),
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = CharcoalBackground,
+                                checkedTrackColor = LimeAccent,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    }
                 }
             }
 
@@ -137,14 +193,15 @@ fun WalkingActivityHeroCard(
                         style = MaterialTheme.typography.headlineLarge.copy(
                             fontWeight = FontWeight.Black,
                             fontSize = 42.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            letterSpacing = (-1).sp
                         )
                     )
                     Text(
                         text = "${if (isKm) "គោលដៅ" else "Goal"}: ${String.format(java.util.Locale.US, "%,d", stepGoal)} ${if (isKm) "ជំហាន" else "steps"}",
-                        style = MaterialTheme.typography.bodyMedium.copy(
+                        style = MaterialTheme.typography.bodySmall.copy(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Medium
                         )
                     )
                 }
@@ -165,33 +222,46 @@ fun WalkingActivityHeroCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Animated Smooth Progress Bar
-            LinearProgressIndicator(
-                progress = { animatedProgress },
+            // Glowing Smooth Track Progress Bar (NEVER shows 2 weird disconnected dots)
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(CircleShape),
-                color = LimeAccent,
-                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-            )
+                    .height(9.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                if (animatedProgress > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(animatedProgress.coerceIn(0.04f, 1f))
+                            .clip(CircleShape)
+                            .background(
+                                androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                    listOf(Color(0xFF00E5FF), LimeAccent)
+                                )
+                            )
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Bottom Sub-metrics: Distance & Calories Burned
+            // Bottom Sub-metrics: Distance, Calories, Sensor status
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Distance Walked
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -199,23 +269,35 @@ fun WalkingActivityHeroCard(
                         imageVector = Icons.Default.DirectionsWalk,
                         contentDescription = "Distance",
                         tint = Color(0xFF00E5FF),
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(17.dp)
                     )
-                    Text(
-                        text = String.format(java.util.Locale.US, "%.2f km", distanceMeters / 1000.0),
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                    Column {
+                        Text(
+                            text = String.format(java.util.Locale.US, "%.2f km", distanceMeters / 1000.0),
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            maxLines = 1,
+                            softWrap = false
                         )
-                    )
+                        Text(
+                            text = if (isKm) "ចម្ងាយ" else "Distance",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 9.5.sp
+                            )
+                        )
+                    }
                 }
 
                 // Calories Burned
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -223,15 +305,62 @@ fun WalkingActivityHeroCard(
                         imageVector = Icons.Default.LocalFireDepartment,
                         contentDescription = "Calories",
                         tint = Color(0xFFFFAB00),
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(17.dp)
                     )
-                    Text(
-                        text = String.format(java.util.Locale.US, "%.0f kcal", caloriesBurned),
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                    Column {
+                        Text(
+                            text = String.format(java.util.Locale.US, "%.0f kcal", caloriesBurned),
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            maxLines = 1,
+                            softWrap = false
                         )
+                        Text(
+                            text = if (isKm) "កាឡូរី" else "Calories",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 9.5.sp
+                            )
+                        )
+                    }
+                }
+
+                // Sensor Status
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sensors,
+                        contentDescription = "Sensor",
+                        tint = if (isTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(17.dp)
                     )
+                    Column {
+                        Text(
+                            text = if (isTrackingEnabled) "24/7 AUTO" else "OFF",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = if (isTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                        Text(
+                            text = if (isKm) "Motion" else "Sensor",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 9.5.sp
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -448,32 +577,33 @@ fun QuickActionButton(
 ) {
     Card(
         modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .testTag(testTag),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.25f)),
+        border = androidx.compose.foundation.BorderStroke(1.2.dp, accentColor.copy(alpha = 0.35f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 14.dp, horizontal = 6.dp),
+                .padding(vertical = 14.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(46.dp)
-                    .clip(CircleShape)
-                    .background(accentColor.copy(alpha = 0.16f)),
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(accentColor.copy(alpha = 0.16f))
+                    .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
                     tint = accentColor,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -484,7 +614,7 @@ fun QuickActionButton(
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 11.5.sp,
+                    fontSize = 11.sp,
                     letterSpacing = (-0.2).sp
                 ),
                 maxLines = 1,

@@ -1,9 +1,9 @@
 {
-  "versionCode": 7,
-  "versionName": "1.0.6",
+  "versionCode": 8,
+  "versionName": "1.0.7",
   "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk",
-  "releaseNotesEn": "Update v1.0.6: Luxury Obsidian Sport UI redesign, interactive workout history detail breakdown (jumps, cadence, tonnage), and progress vs yesterday progression analytics.",
-  "releaseNotesKm": "កំណែថ្មី v1.0.6៖ កែលម្អ UI កីឡាទំនើប Obsidian Sport, បន្ថែមផ្ទាំង Detail មើលចំនួនលោតអន្ទាក់/ល្បឿន/ទម្ងន់ក្នុង History, និងមុខងារប្រៀបធៀប Progress ល្អជាងម្សិលមិញ។",
-  "fileSizeBytes": 28860000,
+  "releaseNotesEn": "Update v1.0.7: Fixed text wrapping issues (Jump Cadence tag, Resume button, Progress vs Yesterday badge), unified Daily Walking and 24/7 motion sensor card, redesigned workout routine plans with exercise breakdown modal, and added comprehensive Cloud Firestore synchronization.",
+  "releaseNotesKm": "កំណែថ្មី v1.0.7៖ ដោះស្រាយបញ្ហាអក្សរធ្លាក់បន្ទាត់ (Jump Cadence, ប៊ូតុង Resume, Badge Progress), បញ្ចូលកាតដើរប្រចាំថ្ងៃជាមួយប៊ូតុង Sensor 24/7 ឱ្យនៅជាមួយគ្នាស្អាត, កែលម្អផ្ទាំង Routine ហាត់ប្រាណអាចមើលលំហាត់លម្អិត, និងបន្ថែមប្រព័ន្ធ Sync ទៅកាន់ Cloud Firestore។",
+  "fileSizeBytes": 28939556,
   "mandatory": false
 }

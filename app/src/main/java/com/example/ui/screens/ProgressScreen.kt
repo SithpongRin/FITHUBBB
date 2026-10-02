@@ -264,20 +264,22 @@ fun ProgressScreen(
                                 Text(
                                     text = when {
                                         todayCalories > yesterdayCalories ->
-                                            if (isKm) "ល្អជាងម្សិលមិញ +$caloriePercentChange%" else "+$caloriePercentChange% vs Yesterday"
+                                            "+$caloriePercentChange%"
                                         yesterdayCalories > 0.0 && todayCalories == 0.0 ->
-                                            if (isKm) "គោលដៅ៖ ${yesterdayCalories.toInt()} kcal" else "Goal: ${yesterdayCalories.toInt()} kcal"
+                                            "${yesterdayCalories.toInt()} kcal"
                                         todayCalories > 0.0 && todayCalories <= yesterdayCalories ->
-                                            if (isKm) "នៅខ្វះ ${(-calorieDiff).toInt()} kcal" else "${(-calorieDiff).toInt()} kcal to match"
+                                            "-${(-calorieDiff).toInt()} kcal"
                                         else ->
-                                            if (isKm) "ត្រៀមខ្លួនសម្រាប់ថ្ងៃនេះ" else "Ready Today"
+                                            if (isKm) "ត្រៀមខ្លួន" else "Ready"
                                     },
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Black,
                                         color = if (todayCalories > yesterdayCalories) LimeAccent
                                         else if (yesterdayCalories > 0 && todayCalories == 0.0) WarningAmber
                                         else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    ),
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }

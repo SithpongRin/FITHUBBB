@@ -283,7 +283,7 @@ fun HomeScreen(
                                     is UpdateStatus.Available -> if (isKm) "មាន Update" else "Update"
                                     is UpdateStatus.Downloading -> "${(updateStatus as UpdateStatus.Downloading).progressPercent}%"
                                     is UpdateStatus.ReadyToInstall -> if (isKm) "ដំឡើង" else "Install"
-                                    else -> "v1.0.6"
+                                    else -> "v1.0.7"
                                 },
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
@@ -684,7 +684,7 @@ fun HomeScreen(
 
 
 
-        // 2. Hero Card: Walking & Daily Step Activity (no workout duration, prominent steps & calories with motion)
+        // 2. Hero Card: Walking & Daily Step Activity (Integrated with 24/7 Motion Sensor Toggle)
         item(key = "hero_walking_activity_card") {
             WalkingActivityHeroCard(
                 stepCount = todayStepCount,
@@ -693,118 +693,19 @@ fun HomeScreen(
                 distanceMeters = todayStepDistanceMeters,
                 streakDays = streakResult.currentStreak,
                 isKm = isKm,
-                isTrackingEnabled = isStepTrackingEnabled
-            )
-        }
-
-        // 3. Hardware Motion Sensor Card
-        item(key = "card_step_sensor_toggle") {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .testTag("card_daily_steps"),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (isStepTrackingEnabled) LimeAccent.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(if (isStepTrackingEnabled) LimeAccent.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surface),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DirectionsWalk,
-                                contentDescription = "Steps Sensor",
-                                tint = if (isStepTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(24.dp)
-                            )
+                isTrackingEnabled = isStepTrackingEnabled,
+                onToggleTracking = { enabled ->
+                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+                            activityRecognitionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                        } else {
+                            viewModel.setStepTrackingEnabled(true)
                         }
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = viewModel.str(StringKey.DAILY_STEPS),
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = (-0.3).sp
-                                    )
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(if (isStepTrackingEnabled) LimeAccent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = if (isStepTrackingEnabled) "24/7 AUTO" else "OFF",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Black,
-                                            fontSize = 9.sp,
-                                            color = if (isStepTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = if (isStepTrackingEnabled) {
-                                    if (isKm) "ឧបករណ៍ Sensor រាប់ជំហានដោយស្វ័យប្រវត្តិក្នងទូរសព្ទ" else "Hardware sensor tracking walking continuously in background"
-                                } else {
-                                    if (isKm) "ការរាប់ជំហានត្រូវបានផ្អាកជាបណ្ដោះអាសន្ន" else "Background step sensor currently paused"
-                                },
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 11.5.sp
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                    } else {
+                        viewModel.setStepTrackingEnabled(enabled)
                     }
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    Switch(
-                        checked = isStepTrackingEnabled,
-                        onCheckedChange = { enabled ->
-                            if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
-                                    activityRecognitionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
-                                } else {
-                                    viewModel.setStepTrackingEnabled(true)
-                                }
-                            } else {
-                                viewModel.setStepTrackingEnabled(enabled)
-                            }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = CharcoalBackground,
-                            checkedTrackColor = LimeAccent
-                        )
-                    )
                 }
-            }
+            )
         }
 
         // 4. Quick Actions (Running, Walking, Jumping, Weightlifting)

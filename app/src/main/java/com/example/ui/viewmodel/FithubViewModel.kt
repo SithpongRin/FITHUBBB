@@ -635,6 +635,10 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun getExercisesForPlan(planId: String): Flow<List<com.example.data.PlanExerciseEntity>> {
+        return repository.getExercisesForPlanFlow(planId)
+    }
+
     // Nutrition actions
     fun logMeal(
         mealType: String,
