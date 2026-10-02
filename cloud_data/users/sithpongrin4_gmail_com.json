@@ -4,7 +4,7 @@
   "passwordHash": "",
   "displayName": "Sithpongrin4",
   "photoUrl": "https:\/\/api.dicebear.com\/7.x\/initials\/png?seed=Sithpongrin4&backgroundColor=c6ff00&textColor=121212",
-  "updatedAt": 1790949960401,
+  "updatedAt": 1790949961431,
   "profile": {
     "fullName": "ក្តីពិ ស",
     "age": 21,
@@ -17,23 +17,6 @@
     "updatedAt": 1790949240611
   },
   "workouts": [
-    {
-      "id": "2786ce0a-c5eb-4527-948f-2352e4c35a03",
-      "type": "JUMPING",
-      "startTime": 1790942682680,
-      "endTime": 1790942940003,
-      "durationSeconds": 54,
-      "caloriesBurned": 1.9574285714285715,
-      "distanceMeters": 0,
-      "averagePaceSecPerKm": 0,
-      "jumpCount": 13,
-      "totalVolumeKg": 0,
-      "totalReps": 0,
-      "localDate": "2026-10-02",
-      "notes": "Jump Rope Cardio",
-      "createdAt": 1790942940003,
-      "updatedAt": 1790942940003
-    },
     {
       "id": "59254517-1700-47c6-a317-f4c801b45d0d",
       "type": "RUNNING",
