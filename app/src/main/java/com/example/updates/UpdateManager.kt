@@ -70,9 +70,10 @@ object UpdateManager {
             return@withContext
         }
 
-        // Try primary raw URL first, then fallback to GitHub API
+        // Try primary raw URL first, then jsDelivr CDN, then fallback to GitHub API
         val candidateUrls = listOf(
             customUpdateUrl,
+            "https://cdn.jsdelivr.net/gh/SithpongRin/FITHUBBB@main/version.json",
             "https://raw.githubusercontent.com/SithpongRin/FITHUBBB/refs/heads/main/version.json"
         )
 
@@ -151,12 +152,14 @@ object UpdateManager {
         while (redirectCount < 4) {
             val url = URL(currentUrl)
             val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 8000
-            conn.readTimeout = 8000
+            conn.connectTimeout = 10000
+            conn.readTimeout = 10000
             conn.useCaches = false
             conn.instanceFollowRedirects = true
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) FithubApp/1.0.5")
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) FithubApp/1.1.0")
             conn.setRequestProperty("Accept", "application/json, text/plain, */*")
+            conn.setRequestProperty("Connection", "close")
+            conn.setRequestProperty("Accept-Encoding", "identity")
 
             val code = conn.responseCode
             if (code == HttpURLConnection.HTTP_MOVED_TEMP || code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_SEE_OTHER || code == 307 || code == 308) {
@@ -170,9 +173,7 @@ object UpdateManager {
             }
 
             if (code == HttpURLConnection.HTTP_OK) {
-                val reader = BufferedReader(InputStreamReader(conn.inputStream, Charsets.UTF_8))
-                val content = reader.readText()
-                reader.close()
+                val content = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                 conn.disconnect()
                 return content
             } else {
