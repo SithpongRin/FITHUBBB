@@ -4,7 +4,7 @@
   "passwordHash": "",
   "displayName": "Sithpongrin4",
   "photoUrl": "https:\/\/api.dicebear.com\/7.x\/initials\/png?seed=Sithpongrin4&backgroundColor=c6ff00&textColor=121212",
-  "updatedAt": 1790937401459,
+  "updatedAt": 1790937455368,
   "profile": {
     "fullName": "Sithpongrin4",
     "age": 21,
@@ -17,6 +17,23 @@
     "updatedAt": 1790932929748
   },
   "workouts": [
+    {
+      "id": "96ad8502-aebf-489c-afa2-3484c4134334",
+      "type": "WALKING",
+      "startTime": 1790937225419,
+      "endTime": 1790937454550,
+      "durationSeconds": 190,
+      "caloriesBurned": 2.8159064961558387,
+      "distanceMeters": 60.55712894958793,
+      "averagePaceSecPerKm": 3137.533157461437,
+      "jumpCount": 0,
+      "totalVolumeKg": 0,
+      "totalReps": 0,
+      "localDate": "2026-10-02",
+      "notes": "Fitness Walk",
+      "createdAt": 1790937454550,
+      "updatedAt": 1790937454550
+    },
     {
       "id": "29872fc6-5491-40f1-b120-177f1da66fd0",
       "type": "JUMPING",
@@ -40,11 +57,11 @@
   "dailySteps": [
     {
       "localDate": "2026-10-02",
-      "stepCount": 547,
+      "stepCount": 648,
       "goalSteps": 8000,
-      "distanceMeters": 416.814,
-      "caloriesBurned": 22.974,
-      "updatedAt": 1790937393974
+      "distanceMeters": 493.776,
+      "caloriesBurned": 27.216,
+      "updatedAt": 1790937451055
     }
   ]
 }
