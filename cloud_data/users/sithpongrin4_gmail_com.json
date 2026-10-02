@@ -4,7 +4,7 @@
   "passwordHash": "",
   "displayName": "Sithpongrin4",
   "photoUrl": "https:\/\/api.dicebear.com\/7.x\/initials\/png?seed=Sithpongrin4&backgroundColor=c6ff00&textColor=121212",
-  "updatedAt": 1790928792653,
+  "updatedAt": 1790929021272,
   "profile": {
     "fullName": "Sithpongrin4",
     "age": 25,
@@ -16,7 +16,25 @@
     "unitSystem": "METRIC",
     "updatedAt": 1790924037942
   },
-  "workouts": [],
+  "workouts": [
+    {
+      "id": "29872fc6-5491-40f1-b120-177f1da66fd0",
+      "type": "JUMPING",
+      "startTime": 1790929004691,
+      "endTime": 1790929020630,
+      "durationSeconds": 10,
+      "caloriesBurned": 0.34,
+      "distanceMeters": 0,
+      "averagePaceSecPerKm": 0,
+      "jumpCount": 2,
+      "totalVolumeKg": 0,
+      "totalReps": 0,
+      "localDate": "2026-10-02",
+      "notes": "Jump Rope Cardio",
+      "createdAt": 1790929020630,
+      "updatedAt": 1790929020630
+    }
+  ],
   "sleep": [],
   "nutrition": [],
   "dailySteps": [
@@ -26,7 +44,7 @@
       "goalSteps": 8000,
       "distanceMeters": 31.242,
       "caloriesBurned": 1.7220000000000002,
-      "updatedAt": 1790928576994
+      "updatedAt": 1790928792006
     }
   ]
 }
