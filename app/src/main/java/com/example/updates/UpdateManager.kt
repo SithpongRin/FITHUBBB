@@ -41,8 +41,8 @@ sealed class UpdateStatus {
 
 object UpdateManager {
 
-    const val CURRENT_VERSION_NAME = "1.0.9"
-    const val CURRENT_VERSION_CODE = 10
+    const val CURRENT_VERSION_NAME = "1.1.0"
+    const val CURRENT_VERSION_CODE = 11
 
     private val _updateStatus = MutableStateFlow<UpdateStatus>(UpdateStatus.Idle)
     val updateStatus: StateFlow<UpdateStatus> = _updateStatus.asStateFlow()

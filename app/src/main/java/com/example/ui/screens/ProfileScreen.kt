@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -468,12 +470,13 @@ fun ProfileScreen(
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .padding(horizontal = 24.dp)
-                    .padding(bottom = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(bottom = 20.dp)
             ) {
                 // Header
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -486,7 +489,15 @@ fun ProfileScreen(
                     }
                 }
 
-                // Full Name
+                // Scrollable Form Body
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Full Name
                 OutlinedTextField(
                     value = nameInput,
                     onValueChange = { nameInput = it },
@@ -832,11 +843,15 @@ fun ProfileScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
-                // Bottom Action Buttons
+                // Sticky Bottom Action Buttons
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .navigationBarsPadding(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(

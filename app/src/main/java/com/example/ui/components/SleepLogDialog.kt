@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -68,12 +69,13 @@ fun SleepLogDialog(
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(horizontal = 24.dp)
-                .padding(bottom = 36.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(bottom = 20.dp)
         ) {
             // Header
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -94,8 +96,16 @@ fun SleepLogDialog(
                 }
             }
 
-            // 1. Duration Hero Display & Steppers (Tap to adjust)
-            Card(
+            // Scrollable Body
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // 1. Duration Hero Display & Steppers (Tap to adjust)
+                Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
@@ -333,11 +343,15 @@ fun SleepLogDialog(
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+            }
 
-            // 4. Action buttons
+            // Sticky Bottom Action Buttons
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
+                    .navigationBarsPadding(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(

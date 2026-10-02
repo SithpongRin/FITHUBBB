@@ -3,6 +3,8 @@ package com.example.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -608,11 +610,12 @@ fun PlansScreen(
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .padding(horizontal = 24.dp)
-                    .padding(bottom = 36.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(bottom = 20.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -631,8 +634,16 @@ fun PlansScreen(
                     }
                 }
 
-                // 1. Interactive Time Picker (Clock Stepper & AM/PM - NO MANUAL TYPING)
-                Card(
+                // Scrollable content area so buttons are NEVER pushed off screen
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // 1. Interactive Time Picker (Clock Stepper & AM/PM - NO MANUAL TYPING)
+                    Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -927,11 +938,15 @@ fun PlansScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
-                // Action Buttons
+                // Sticky Bottom Action Buttons - Always visible and clickable
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .navigationBarsPadding(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OutlinedButton(
@@ -1208,7 +1223,10 @@ fun PlansScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = LimeAccent, contentColor = CharcoalBackground),
                     shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .navigationBarsPadding()
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))

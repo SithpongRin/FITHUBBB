@@ -172,100 +172,88 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(top = 18.dp, bottom = 120.dp)
     ) {
-        // 1. Sleek Command Bar Header
+        // 1. Top Utility Bar (Greeting / Sync Status on Left + Actions on Right)
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .padding(top = 4.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    // Cloud Status Beacon & Greeting Pill
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                // Cloud Status Beacon & Greeting Pill
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(7.dp)
-                                .clip(CircleShape)
-                                .background(if (currentAccount.isOnline) SuccessGreen else WarningAmber)
-                        )
-                        Text(
-                            text = if (currentAccount.isOnline) {
-                                if (isKm) "ភ្ជាប់ Cloud រួចរាល់" else "Live Cloud Sync"
-                            } else {
-                                if (isKm) "Offline Mode" else "Offline Ready"
-                            },
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = if (currentAccount.isOnline) SuccessGreen else WarningAmber,
-                                fontSize = 10.5.sp
-                            )
-                        )
-                        Text(
-                            text = "•",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                            )
-                        )
-                        Text(
-                            text = viewModel.str(greetingKey),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 10.5.sp
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(if (currentAccount.isOnline) SuccessGreen else WarningAmber)
+                    )
                     Text(
-                        text = if (currentAccount.isOnline) currentAccount.displayName else (profile?.fullName ?: "Athlete"),
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = (-0.5).sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                        text = if (currentAccount.isOnline) {
+                            if (isKm) "Cloud Sync" else "Live Cloud Sync"
+                        } else {
+                            if (isKm) "Offline Mode" else "Offline Ready"
+                        },
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = if (currentAccount.isOnline) SuccessGreen else WarningAmber,
+                            fontSize = 10.5.sp
+                        )
+                    )
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    )
+                    Text(
+                        text = viewModel.str(greetingKey),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 10.5.sp
                         )
                     )
                 }
 
+                // Compact Top Utility Controls (Version + Language + Theme)
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Update Status Quick Badge & Trigger
                     Box(
                         modifier = Modifier
-                            .height(40.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .height(32.dp)
+                            .clip(RoundedCornerShape(16.dp))
                             .background(
                                 if (updateStatus is UpdateStatus.Available) LimeAccent.copy(alpha = 0.2f)
-                                else MaterialTheme.colorScheme.surfaceVariant
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                             )
                             .border(
                                 width = 1.dp,
                                 color = if (updateStatus is UpdateStatus.Available) LimeAccent else Color.Transparent,
-                                shape = RoundedCornerShape(20.dp)
+                                shape = RoundedCornerShape(16.dp)
                             )
                             .clickable { viewModel.checkForUpdates(forceSimulate = false) }
-                            .padding(horizontal = 10.dp)
+                            .padding(horizontal = 8.dp)
                             .testTag("header_update_check_button"),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
                             if (updateStatus is UpdateStatus.Checking) {
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(14.dp),
+                                    modifier = Modifier.size(12.dp),
                                     strokeWidth = 2.dp,
                                     color = LimeAccent
                                 )
@@ -274,7 +262,7 @@ fun HomeScreen(
                                     imageVector = if (updateStatus is UpdateStatus.Available) Icons.Default.NewReleases else Icons.Default.CloudSync,
                                     contentDescription = "Check for Updates",
                                     tint = if (updateStatus is UpdateStatus.Available) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
                             }
                             Text(
@@ -287,26 +275,27 @@ fun HomeScreen(
                                 },
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
                                     color = if (updateStatus is UpdateStatus.Available) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             )
                         }
                     }
 
-                    // Glass Language Switcher Button (Khmer / English)
+                    // Language Switcher Button (Khmer / English)
                     Box(
                         modifier = Modifier
-                            .height(40.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .height(32.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
                             .clickable { viewModel.toggleLanguage() }
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = 10.dp)
                             .testTag("header_language_toggle_button"),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = if (viewModel.appLanguage.collectAsState().value.code == "km") "ខ្មែរ" else "EN",
-                            style = MaterialTheme.typography.labelMedium.copy(
+                            style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Black,
                                 color = LimeAccent
                             )
@@ -316,9 +305,9 @@ fun HomeScreen(
                     // Theme Switch Button
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(32.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
                             .clickable { viewModel.toggleDarkMode() }
                             .testTag("header_theme_toggle_button"),
                         contentAlignment = Alignment.Center
@@ -327,39 +316,63 @@ fun HomeScreen(
                             imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
                             contentDescription = "Toggle Light/Dark Theme",
                             tint = if (isDarkMode) WarningAmber else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
+                }
+            }
+        }
 
-                    // Profile Avatar with Neon Accent Ring
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .border(1.5.dp, LimeAccent, CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable(onClick = onOpenProfile)
-                            .testTag("header_profile_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val avatarUrl = currentAccount.photoUrl
-                        if (!avatarUrl.isNullOrEmpty()) {
-                            AsyncImage(
-                                model = avatarUrl,
-                                contentDescription = "Profile Picture",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Profile",
-                                tint = LimeAccent,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+        // 2. Main Hero Welcome Row (Athlete Name & Avatar)
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                    Text(
+                        text = if (currentAccount.isOnline) currentAccount.displayName else (profile?.fullName ?: "Athlete"),
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-0.5).sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                // Profile Avatar with Neon Accent Ring
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .border(1.5.dp, LimeAccent, CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable(onClick = onOpenProfile)
+                        .testTag("header_profile_button"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val avatarUrl = currentAccount.photoUrl
+                    if (!avatarUrl.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = avatarUrl,
+                            contentDescription = "Profile Picture",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profile",
+                            tint = LimeAccent,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
