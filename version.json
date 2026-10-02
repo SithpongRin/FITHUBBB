@@ -1,9 +1,9 @@
 {
-  "versionCode": 13,
-  "versionName": "1.1.2",
+  "versionCode": 14,
+  "versionName": "1.1.3",
   "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk",
-  "releaseNotesEn": "Update v1.1.2: Added loud audio chime and Voice Coach TTS announcing jump counts on milestones (10, 50, 100, 200, 300+ jumps), enhanced notification reliability, fixed history deletion resurrection bug, and added Everyday workout reminder.",
-  "releaseNotesKm": "កំណែថ្មី v1.1.2៖ បន្ថែមសំឡេងរោទ៍ខ្លាំង និងសំឡេង Voice Coach អានប្រាប់ចំនួនដងនៃការលោតខ្សែ (10, 50, 100, 200, 300+ ដង), ពង្រឹងប្រព័ន្ធ Notification ឱ្យដំណើរការត្រឹមត្រូវ, កែសម្រួលការលុបប្រវត្តិមិនឱ្យលោតមកវិញ, និងបន្ថែមជម្រើសរំលឹក រាល់ថ្ងៃ (Everyday)។",
+  "releaseNotesEn": "Update v1.1.3: Jump Rope Goal-Based Training System with recommended presets (Endurance, Fat Loss, Health), customizable target reps/time, rounds, rest intervals, and bilingual Khmer/English Voice Coach.",
+  "releaseNotesKm": "កំណែថ្មី v1.1.3៖ ប្រព័ន្ធហ្វឹកហាត់លោតខ្សែតាមគោលដៅ (Endurance, Fat Loss, Health), កំណត់ចំនួនដង ឬរយៈពេល, កំណត់ជុំ និងការសម្រាក, ព្រមទាំងគ្រូបង្វឹកសំឡេងពីរបាសា (ខ្មែរ/អង់គ្លេស)។",
   "fileSizeBytes": 28976050,
   "mandatory": false
 }
