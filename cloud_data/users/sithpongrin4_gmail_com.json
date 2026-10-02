@@ -4,7 +4,7 @@
   "passwordHash": "",
   "displayName": "Sithpongrin4",
   "photoUrl": "https:\/\/api.dicebear.com\/7.x\/initials\/png?seed=Sithpongrin4&backgroundColor=c6ff00&textColor=121212",
-  "updatedAt": 1790938199923,
+  "updatedAt": 1790938201066,
   "profile": {
     "fullName": "Sithpongrin4",
     "age": 21,
@@ -17,23 +17,6 @@
     "updatedAt": 1790932929748
   },
   "workouts": [
-    {
-      "id": "96ad8502-aebf-489c-afa2-3484c4134334",
-      "type": "WALKING",
-      "startTime": 1790937225419,
-      "endTime": 1790937454550,
-      "durationSeconds": 190,
-      "caloriesBurned": 2.8159064961558387,
-      "distanceMeters": 60.55712894958793,
-      "averagePaceSecPerKm": 3137.533157461437,
-      "jumpCount": 0,
-      "totalVolumeKg": 0,
-      "totalReps": 0,
-      "localDate": "2026-10-02",
-      "notes": "Fitness Walk",
-      "createdAt": 1790937454550,
-      "updatedAt": 1790937454550
-    },
     {
       "id": "29872fc6-5491-40f1-b120-177f1da66fd0",
       "type": "JUMPING",
@@ -50,6 +33,23 @@
       "notes": "Jump Rope Cardio",
       "createdAt": 1790929020630,
       "updatedAt": 1790929020630
+    },
+    {
+      "id": "96ad8502-aebf-489c-afa2-3484c4134334",
+      "type": "WALKING",
+      "startTime": 1790937225419,
+      "endTime": 1790937454550,
+      "durationSeconds": 190,
+      "caloriesBurned": 2.8159064961558387,
+      "distanceMeters": 60.55712894958793,
+      "averagePaceSecPerKm": 3137.533157461437,
+      "jumpCount": 0,
+      "totalVolumeKg": 0,
+      "totalReps": 0,
+      "localDate": "2026-10-02",
+      "notes": "Fitness Walk",
+      "createdAt": 1790937454550,
+      "updatedAt": 1790937454550
     },
     {
       "id": "59254517-1700-47c6-a317-f4c801b45d0d",
