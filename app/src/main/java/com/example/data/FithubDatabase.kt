@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
         ActiveSessionEntity::class,
         DailyStepsEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class FithubDatabase : RoomDatabase() {
@@ -157,6 +157,30 @@ abstract class FithubDatabase : RoomDatabase() {
             )
         )
 
+        val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add Jump Rope Goal/Target columns to workouts table
+                try {
+                    db.execSQL("ALTER TABLE workouts ADD COLUMN goalType TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE workouts ADD COLUMN goalName TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE workouts ADD COLUMN targetType TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE workouts ADD COLUMN targetValue INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE workouts ADD COLUMN roundsTotal INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE workouts ADD COLUMN roundsCompleted INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE workouts ADD COLUMN restDurationSeconds INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE workouts ADD COLUMN activeDurationSeconds INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE workouts ADD COLUMN restDurationTotalSeconds INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE workouts ADD COLUMN completionStatus TEXT NOT NULL DEFAULT 'COMPLETED'")
+                } catch (_: Throwable) {}
+
+                // Add Jump Rope state columns to active_session table
+                try {
+                    db.execSQL("ALTER TABLE active_session ADD COLUMN jumpRopeConfigJson TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE active_session ADD COLUMN jumpRopeStateJson TEXT NOT NULL DEFAULT ''")
+                } catch (_: Throwable) {}
+            }
+        }
+
         fun getDatabase(context: Context): FithubDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -164,6 +188,7 @@ abstract class FithubDatabase : RoomDatabase() {
                     FithubDatabase::class.java,
                     "fithub_database"
                 )
+                .addMigrations(MIGRATION_2_3)
                 .fallbackToDestructiveMigration(true)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {

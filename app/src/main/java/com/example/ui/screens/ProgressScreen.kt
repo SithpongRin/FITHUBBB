@@ -833,6 +833,51 @@ fun ProgressScreen(
                                             (workout.jumpCount * 60L) / workout.durationSeconds
                                         } else 0L
 
+                                        val goalDisplayName = if (workout.goalName.isNotBlank()) workout.goalName
+                                        else if (workout.goalType.isNotBlank()) workout.goalType
+                                        else "Standard"
+
+                                        val targetSummary = if (workout.targetType.isNotBlank()) {
+                                            if (workout.targetType == "REPS") "${workout.targetValue} jumps x ${workout.roundsTotal} rounds"
+                                            else "${workout.targetValue}s x ${workout.roundsTotal} rounds"
+                                        } else "${workout.jumpCount} jumps"
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            DetailMetricItem(
+                                                label = if (isKm) "គោលដៅហ្វឹកហាត់ (Goal)" else "Training Goal",
+                                                value = goalDisplayName,
+                                                accentColor = LimeAccent
+                                            )
+                                            DetailMetricItem(
+                                                label = if (isKm) "ស្ថានភាព (Status)" else "Completion Status",
+                                                value = workout.completionStatus,
+                                                accentColor = if (workout.completionStatus == "COMPLETED") SuccessGreen else WarningAmber
+                                            )
+                                        }
+
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            DetailMetricItem(
+                                                label = if (isKm) "គោលដៅអនុវត្ត (Target)" else "Workout Target",
+                                                value = targetSummary,
+                                                accentColor = sportColor
+                                            )
+                                            DetailMetricItem(
+                                                label = if (isKm) "ជុំបានបញ្ចប់ (Rounds)" else "Rounds Completed",
+                                                value = if (workout.roundsTotal > 0) "${workout.roundsCompleted} / ${workout.roundsTotal}" else "-",
+                                                accentColor = sportColor
+                                            )
+                                        }
+
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween
@@ -861,7 +906,7 @@ fun ProgressScreen(
                                                 accentColor = Color(0xFFFFAB00)
                                             )
                                             DetailMetricItem(
-                                                label = if (isKm) "រយៈពេល" else "Duration",
+                                                label = if (isKm) "ថិរវេលាហាត់សរុប" else "Total Duration",
                                                 value = FormatUtils.formatDuration(workout.durationSeconds),
                                                 accentColor = MaterialTheme.colorScheme.onSurface
                                             )

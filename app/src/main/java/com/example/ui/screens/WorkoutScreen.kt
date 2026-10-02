@@ -38,6 +38,7 @@ import com.example.calculations.PaceCalculator
 import com.example.localization.StringKey
 import com.example.sensors.JumpDetector
 import com.example.sensors.LocationTracker
+import com.example.ui.components.JumpRopeConfigDialog
 import com.example.ui.components.StatCard
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.FithubViewModel
@@ -83,7 +84,7 @@ fun WorkoutScreen(
     }
 
     // Start / stop hardware sensors based on workout state
-    LaunchedEffect(activeWorkout.isActive, activeWorkout.isPaused, activeWorkout.type) {
+    LaunchedEffect(activeWorkout.isActive, activeWorkout.isPaused, activeWorkout.type, activeWorkout.currentRound, activeWorkout.jumpRopeState) {
         if (activeWorkout.isActive) {
             when (activeWorkout.type) {
                 "RUNNING", "WALKING" -> {
@@ -103,8 +104,8 @@ fun WorkoutScreen(
                     }
                 }
                 "JUMPING" -> {
-                    if (!activeWorkout.isPaused) {
-                        jumpDetector.start(activeWorkout.jumpCount)
+                    if (!activeWorkout.isPaused && activeWorkout.jumpRopeState == com.example.jumprope.JumpRopeWorkoutState.WORKOUT) {
+                        jumpDetector.start(activeWorkout.currentRoundJumps)
                     } else {
                         jumpDetector.stop()
                     }
@@ -164,12 +165,25 @@ fun WorkoutIdleView(
     modifier: Modifier = Modifier
 ) {
     val isKm = viewModel.appLanguage.collectAsState().value.code == "km"
+    var showJumpRopeDialog by remember { mutableStateOf(false) }
+
     val modalities = listOf(
         listOf("RUNNING", StringKey.WORKOUT_RUNNING, Icons.Default.DirectionsRun, Color(0xFFC6FF00)),
         listOf("WALKING", StringKey.WORKOUT_WALKING, Icons.Default.DirectionsWalk, Color(0xFF00E5FF)),
         listOf("JUMPING", StringKey.WORKOUT_JUMPING, Icons.Default.Bolt, Color(0xFFFFAB00)),
         listOf("WEIGHTLIFTING", StringKey.WORKOUT_WEIGHTLIFTING, Icons.Default.FitnessCenter, Color(0xFFB388FF))
     )
+
+    if (showJumpRopeDialog) {
+        com.example.ui.components.JumpRopeConfigDialog(
+            viewModel = viewModel,
+            onDismiss = { showJumpRopeDialog = false },
+            onStartWorkout = {
+                showJumpRopeDialog = false
+                viewModel.startWorkout("JUMPING")
+            }
+        )
+    }
 
     LazyColumn(
         modifier = modifier
@@ -202,11 +216,19 @@ fun WorkoutIdleView(
             val icon = item[2] as androidx.compose.ui.graphics.vector.ImageVector
             val accentColor = item[3] as Color
 
+            val onSelectModality = {
+                if (type == "JUMPING") {
+                    showJumpRopeDialog = true
+                } else {
+                    viewModel.startWorkout(type)
+                }
+            }
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
-                    .clickable { viewModel.startWorkout(type) }
+                    .clickable { onSelectModality() }
                     .testTag("workout_card_$type"),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 border = androidx.compose.foundation.BorderStroke(1.5.dp, accentColor.copy(alpha = 0.35f)),
@@ -281,7 +303,7 @@ fun WorkoutIdleView(
                         Spacer(modifier = Modifier.width(8.dp))
 
                         Button(
-                            onClick = { viewModel.startWorkout(type) },
+                            onClick = { onSelectModality() },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = accentColor,
                                 contentColor = CharcoalBackground
@@ -359,92 +381,7 @@ fun ActiveSessionView(
     var showCalibrateDialog by remember { mutableStateOf(false) }
     var showFinishWorkoutDialog by remember { mutableStateOf(false) }
     var workoutTitleInput by remember { mutableStateOf("") }
-    var milestoneAlertCount by remember { mutableStateOf<Int?>(null) }
-    var lastAlertedCount by remember { mutableIntStateOf(0) }
 
-    var ttsInstance by remember { mutableStateOf<android.speech.tts.TextToSpeech?>(null) }
-
-    DisposableEffect(context) {
-        val tts = android.speech.tts.TextToSpeech(context.applicationContext) { status ->
-            if (status == android.speech.tts.TextToSpeech.SUCCESS) {
-                val kmLocale = java.util.Locale("km", "KH")
-                val res = ttsInstance?.setLanguage(kmLocale)
-                if (res == android.speech.tts.TextToSpeech.LANG_MISSING_DATA || res == android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED) {
-                    ttsInstance?.setLanguage(java.util.Locale.US)
-                }
-            }
-        }
-        ttsInstance = tts
-        onDispose {
-            try {
-                tts.stop()
-                tts.shutdown()
-            } catch (_: Throwable) {}
-        }
-    }
-
-    LaunchedEffect(activeWorkout.jumpCount, activeWorkout.type) {
-        if (activeWorkout.type == "JUMPING") {
-            val count = activeWorkout.jumpCount
-            val isMilestone = (count == 10 || count == 50 || (count > 0 && count % 100 == 0))
-            if (isMilestone && count > lastAlertedCount) {
-                lastAlertedCount = count
-                milestoneAlertCount = count
-
-                // 1. Loud Chime via RingtoneManager
-                try {
-                    val notifUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
-                    val r = android.media.RingtoneManager.getRingtone(context.applicationContext, notifUri)
-                    r?.play()
-                } catch (_: Throwable) {}
-
-                // 2. Loud Audio Tone via STREAM_MUSIC
-                try {
-                    val toneGen = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 100)
-                    toneGen.startTone(android.media.ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 400)
-                } catch (_: Throwable) {}
-
-                // 3. Spoken Voice Announcement via TTS
-                try {
-                    val kmLocale = java.util.Locale("km", "KH")
-                    val isKmSupported = ttsInstance?.let { t ->
-                        val avail = t.isLanguageAvailable(kmLocale)
-                        avail >= android.speech.tts.TextToSpeech.LANG_AVAILABLE
-                    } ?: false
-
-                    val speechText = if (isKm && isKmSupported) {
-                        "លោតបាន $count ដងហើយ"
-                    } else {
-                        "$count jumps completed!"
-                    }
-                    ttsInstance?.speak(speechText, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "jump_$count")
-                } catch (_: Throwable) {}
-
-                // 4. Haptic vibration alert
-                try {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                        val vm = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
-                        vm?.defaultVibrator?.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 150, 100, 250), -1))
-                    } else {
-                        @Suppress("DEPRECATION")
-                        val v = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? android.os.Vibrator
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                            v?.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 150, 100, 250), -1))
-                        } else {
-                            @Suppress("DEPRECATION")
-                            v?.vibrate(longArrayOf(0, 150, 100, 250), -1)
-                        }
-                    }
-                } catch (_: Throwable) {}
-
-                // Auto-dismiss banner after 4.5 seconds
-                kotlinx.coroutines.delay(4500)
-                if (milestoneAlertCount == count) {
-                    milestoneAlertCount = null
-                }
-            }
-        }
-    }
 
     LazyColumn(
         modifier = modifier
@@ -601,218 +538,375 @@ fun ActiveSessionView(
             }
 
             "JUMPING" -> {
-                if (milestoneAlertCount != null) {
-                    item {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(20.dp)),
-                            colors = CardDefaults.cardColors(
-                                containerColor = LimeAccent.copy(alpha = 0.15f)
-                            ),
-                            border = androidx.compose.foundation.BorderStroke(1.5.dp, LimeAccent)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(CircleShape)
-                                        .background(LimeAccent),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Bolt,
-                                        contentDescription = null,
-                                        tint = CharcoalBackground,
-                                        modifier = Modifier.size(26.dp)
-                                    )
-                                }
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = if (isKm) "អបអរសាទរ! ដល់គោលដៅលោតហើយ" else "Milestone Reached!",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Black,
-                                            color = LimeAccent
-                                        )
-                                    )
-                                    Text(
-                                        text = if (isKm) "អ្នកសម្រេចបាន $milestoneAlertCount ដងនៃការលោតខ្សែ!" else "You achieved $milestoneAlertCount jumps!",
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = { milestoneAlertCount = null },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Close",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
+                // Goal, Round & State Header Card
                 item {
+                    val isResting = activeWorkout.jumpRopeState == com.example.jumprope.JumpRopeWorkoutState.REST
+                    val goalName = activeWorkout.jumpRopeConfig.getDisplayName(isKm)
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(32.dp))
-                            .testTag("jump_counter_card"),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, LimeAccent.copy(alpha = 0.5f))
+                            .clip(RoundedCornerShape(20.dp)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isResting) WarningAmber.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.5.dp,
+                            if (isResting) WarningAmber else LimeAccent.copy(alpha = 0.4f)
+                        )
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 22.dp, vertical = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // Header Row: Sensor Badge on left & sleek Calibrate chip on right
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Goal badge
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(LimeAccent.copy(alpha = 0.15f))
-                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (isResting) WarningAmber.copy(alpha = 0.2f) else LimeAccent.copy(alpha = 0.18f))
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .clip(CircleShape)
-                                            .background(LimeAccent)
+                                    Icon(
+                                        imageVector = Icons.Default.Bolt,
+                                        contentDescription = null,
+                                        tint = if (isResting) WarningAmber else LimeAccent,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                     Text(
-                                        text = viewModel.str(StringKey.JUMP_COUNT),
+                                        text = goalName,
                                         style = MaterialTheme.typography.labelMedium.copy(
                                             fontWeight = FontWeight.Bold,
-                                            color = LimeAccent
-                                        )
+                                            color = if (isResting) WarningAmber else LimeAccent
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
 
-                                Surface(
-                                    onClick = {
-                                        jumpDetector.startCalibration()
-                                        showCalibrateDialog = true
-                                    },
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = MaterialTheme.colorScheme.surface,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, LimeAccent.copy(alpha = 0.3f))
+                                // State Badge (WORK / REST)
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (isResting) WarningAmber else LimeAccent)
+                                        .padding(horizontal = 12.dp, vertical = 5.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Tune,
-                                            contentDescription = "Calibrate",
-                                            tint = LimeAccent,
-                                            modifier = Modifier.size(15.dp)
+                                    Text(
+                                        text = if (isResting) viewModel.str(StringKey.JR_STATE_REST) else viewModel.str(StringKey.JR_STATE_WORK),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Black,
+                                            color = CharcoalBackground,
+                                            letterSpacing = 1.sp
                                         )
-                                        Text(
-                                            text = if (isKm) "ក្រិត Sensor" else "Calibrate",
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                color = LimeAccent
-                                            ),
-                                            maxLines = 1
-                                        )
-                                    }
+                                    )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Giant Jump Count Display
-                            Text(
-                                text = "${activeWorkout.jumpCount}",
-                                style = MaterialTheme.typography.displayLarge.copy(
-                                    fontSize = 76.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = LimeAccent,
-                                    letterSpacing = (-2).sp
-                                )
-                            )
-
-                            Text(
-                                text = if (isKm) "ចំនួនលោតសរុប (Jumps)" else "Total Jumps Counted",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            )
-
-                            Spacer(modifier = Modifier.height(18.dp))
-
-                            // Centered, Symmetrical Stepper Capsule
-                            Surface(
-                                shape = RoundedCornerShape(24.dp),
-                                color = MaterialTheme.colorScheme.surface,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                            // Round info & Total Session progress
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                                Text(
+                                    text = "${viewModel.str(StringKey.JR_STATE_ROUND)} ${activeWorkout.currentRound} / ${activeWorkout.totalRounds}",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Black,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+
+                                Text(
+                                    text = "${activeWorkout.totalSessionJumps} ${if (isKm) "ដងសរុប" else "Total Jumps"}",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // If REST state: Show Active Rest Countdown & Skip Rest Button
+                if (activeWorkout.jumpRopeState == com.example.jumprope.JumpRopeWorkoutState.REST) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(24.dp)),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                            border = androidx.compose.foundation.BorderStroke(2.dp, WarningAmber)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Text(
+                                    text = if (isKm) "សម្រាកចន្លោះជុំ" else "Recovery Rest",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = WarningAmber,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp
+                                    )
+                                )
+
+                                Text(
+                                    text = "${activeWorkout.remainingRestSeconds}s",
+                                    style = MaterialTheme.typography.displayLarge.copy(
+                                        fontSize = 72.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = WarningAmber,
+                                        letterSpacing = (-2).sp
+                                    )
+                                )
+
+                                Text(
+                                    text = if (isKm)
+                                        "ជុំទី ${activeWorkout.currentRound} បានបញ្ចប់! ត្រៀមខ្លួនសម្រាប់ជុំបន្ទាប់"
+                                    else
+                                        "Round ${activeWorkout.currentRound} complete! Catch your breath for round ${activeWorkout.currentRound + 1}",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                )
+
+                                Button(
+                                    onClick = { viewModel.skipJumpRopeRest() },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = WarningAmber,
+                                        contentColor = CharcoalBackground
+                                    ),
+                                    shape = RoundedCornerShape(14.dp),
+                                    modifier = Modifier.fillMaxWidth().height(48.dp)
                                 ) {
-                                    FilledIconButton(
-                                        onClick = { jumpDetector.manualDecrement() },
-                                        modifier = Modifier.size(38.dp),
-                                        colors = IconButtonDefaults.filledIconButtonColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                            contentColor = MaterialTheme.colorScheme.onSurface
-                                        )
+                                    Icon(Icons.Default.FastForward, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (isKm) "រំលងការសម្រាក (Skip Rest)" else "Skip Rest & Start Next Round",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // WORKOUT State: Active Jumps / Work Countdown Card
+                    item {
+                        val isRepsMode = activeWorkout.jumpRopeConfig.targetType == com.example.jumprope.JumpRopeTargetType.REPS
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(32.dp))
+                                .testTag("jump_counter_card"),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                            border = androidx.compose.foundation.BorderStroke(1.5.dp, LimeAccent.copy(alpha = 0.5f))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 22.dp, vertical = 24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                // Header Row: Mode / Target Badge & Calibrate chip
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(LimeAccent.copy(alpha = 0.15f))
+                                            .padding(horizontal = 10.dp, vertical = 6.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Remove,
-                                            contentDescription = "Minus 1",
-                                            modifier = Modifier.size(18.dp)
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(LimeAccent)
+                                        )
+                                        Text(
+                                            text = if (isRepsMode) viewModel.str(StringKey.JR_TARGET_REPS) else viewModel.str(StringKey.JR_TARGET_TIME),
+                                            style = MaterialTheme.typography.labelMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = LimeAccent
+                                            )
                                         )
                                     }
 
+                                    Surface(
+                                        onClick = {
+                                            jumpDetector.startCalibration()
+                                            showCalibrateDialog = true
+                                        },
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, LimeAccent.copy(alpha = 0.3f))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Tune,
+                                                contentDescription = "Calibrate",
+                                                tint = LimeAccent,
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                            Text(
+                                                text = if (isKm) "ក្រិត Sensor" else "Calibrate",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = LimeAccent
+                                                ),
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                if (isRepsMode) {
+                                    // Giant Reps Count Display
                                     Text(
-                                        text = if (isKm) "កែសម្រួលដោយដៃ" else "Manual Adjust",
-                                        style = MaterialTheme.typography.labelSmall.copy(
+                                        text = "${activeWorkout.currentRoundJumps}",
+                                        style = MaterialTheme.typography.displayLarge.copy(
+                                            fontSize = 76.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = LimeAccent,
+                                            letterSpacing = (-2).sp
+                                        )
+                                    )
+
+                                    Text(
+                                        text = "${activeWorkout.currentRoundJumps} / ${activeWorkout.jumpRopeConfig.targetValue} ${if (isKm) "ដង (Jumps)" else "JUMPS"}",
+                                        style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                     )
 
-                                    FilledIconButton(
-                                        onClick = { jumpDetector.manualIncrement() },
-                                        modifier = Modifier.size(38.dp),
-                                        colors = IconButtonDefaults.filledIconButtonColors(
-                                            containerColor = LimeAccent,
-                                            contentColor = CharcoalBackground
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    val progress = if (activeWorkout.jumpRopeConfig.targetValue > 0)
+                                        (activeWorkout.currentRoundJumps.toFloat() / activeWorkout.jumpRopeConfig.targetValue).coerceIn(0f, 1f)
+                                    else 0f
+
+                                    LinearProgressIndicator(
+                                        progress = progress,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(8.dp)
+                                            .clip(RoundedCornerShape(4.dp)),
+                                        color = LimeAccent,
+                                        trackColor = MaterialTheme.colorScheme.surface
+                                    )
+                                } else {
+                                    // Time Mode: Work Interval Countdown
+                                    Text(
+                                        text = FormatUtils.formatDuration(activeWorkout.remainingWorkSeconds.toLong()),
+                                        style = MaterialTheme.typography.displayLarge.copy(
+                                            fontSize = 76.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = LimeAccent,
+                                            letterSpacing = (-2).sp
                                         )
+                                    )
+
+                                    Text(
+                                        text = "${activeWorkout.currentRoundJumps} ${if (isKm) "ដងក្នុងជុំនេះ" else "Jumps this round"}",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    )
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    val totalWork = activeWorkout.jumpRopeConfig.targetValue
+                                    val progress = if (totalWork > 0)
+                                        (activeWorkout.remainingWorkSeconds.toFloat() / totalWork).coerceIn(0f, 1f)
+                                    else 0f
+
+                                    LinearProgressIndicator(
+                                        progress = progress,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(8.dp)
+                                            .clip(RoundedCornerShape(4.dp)),
+                                        color = LimeAccent,
+                                        trackColor = MaterialTheme.colorScheme.surface
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(18.dp))
+
+                                // Centered, Symmetrical Stepper Capsule
+                                Surface(
+                                    shape = RoundedCornerShape(24.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Add,
-                                            contentDescription = "Plus 1",
-                                            modifier = Modifier.size(18.dp)
+                                        FilledIconButton(
+                                            onClick = { jumpDetector.manualDecrement() },
+                                            modifier = Modifier.size(38.dp),
+                                            colors = IconButtonDefaults.filledIconButtonColors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                contentColor = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Remove,
+                                                contentDescription = "Minus 1",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+
+                                        Text(
+                                            text = if (isKm) "កែសម្រួលដោយដៃ" else "Manual Adjust",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
                                         )
+
+                                        FilledIconButton(
+                                            onClick = { jumpDetector.manualIncrement() },
+                                            modifier = Modifier.size(38.dp),
+                                            colors = IconButtonDefaults.filledIconButtonColors(
+                                                containerColor = LimeAccent,
+                                                contentColor = CharcoalBackground
+                                            )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Add,
+                                                contentDescription = "Plus 1",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -823,7 +917,7 @@ fun ActiveSessionView(
                 // Two side-by-side metric cards: Calories Burned & Jump Cadence (Rate)
                 item {
                     val cadence = if (activeWorkout.elapsedSeconds > 5) {
-                        ((activeWorkout.jumpCount.toFloat() / activeWorkout.elapsedSeconds) * 60f).toInt()
+                        ((activeWorkout.totalSessionJumps.toFloat() / activeWorkout.elapsedSeconds) * 60f).toInt()
                     } else 0
 
                     Row(
@@ -996,7 +1090,7 @@ fun ActiveSessionView(
                             "RUNNING" -> if (isKm) "រត់ពេលព្រឹក" else "Morning Run"
                             "WALKING" -> if (isKm) "ដើរហាត់ប្រាណ" else "Fitness Walk"
                             "WEIGHTLIFTING" -> if (isKm) "ហាត់លើកទម្ងន់" else "Weightlifting Session"
-                            "JUMPING" -> if (isKm) "លោតខ្សែដុតខ្លាញ់" else "Jump Rope Cardio"
+                            "JUMPING" -> activeWorkout.jumpRopeConfig.getDisplayName(isKm)
                             else -> "Workout Session"
                         }
                         showFinishWorkoutDialog = true
@@ -1053,8 +1147,7 @@ fun ActiveSessionView(
                          else listOf("Morning Walk", "Evening Walk", "Brisk Walk", "Power Walk")
             "WEIGHTLIFTING" -> if (isKm) listOf("ហាត់ទ្រូង និងដៃ", "ហាត់ខ្នង", "ហាត់ជើង", "ហាត់ស្មា", "ហាត់ពេញខ្លួន")
                                else listOf("Chest & Triceps", "Back & Biceps", "Leg Day", "Shoulders", "Full Body")
-            "JUMPING" -> if (isKm) listOf("លោតខ្សែដុតខ្លាញ់", "លោត Cardio HIIT", "លោត ៥០០ ដង")
-                         else listOf("Cardio Jump", "HIIT Jump", "500 Jumps")
+            "JUMPING" -> listOf(activeWorkout.jumpRopeConfig.getDisplayName(isKm), if (isKm) "លោតខ្សែដុតខ្លាញ់" else "Cardio Jump", if (isKm) "លោត Cardio HIIT" else "HIIT Jump")
             else -> listOf("Daily Workout")
         }
 

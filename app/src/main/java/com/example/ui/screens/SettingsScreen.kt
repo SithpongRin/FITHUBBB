@@ -261,6 +261,132 @@ fun SettingsScreen(
             }
         }
 
+        // Jump Rope Preferences Section
+        item {
+            val jrConfig by viewModel.jumpRopeConfig.collectAsState()
+            val isKm = appLanguage == AppLanguage.KHMER
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(22.dp)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isKm) "ការកំណត់លោតខ្សែ (Jump Rope)" else "Jump Rope Settings",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = null,
+                            tint = LimeAccent,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Voice Language Choice
+                    Text(
+                        text = viewModel.str(StringKey.JR_VOICE_LANGUAGE),
+                        style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FilterChip(
+                            selected = jrConfig.voiceLanguage == com.example.jumprope.VoiceLanguage.ENGLISH,
+                            onClick = { viewModel.updateJumpRopeConfig(jrConfig.copy(voiceLanguage = com.example.jumprope.VoiceLanguage.ENGLISH)) },
+                            label = { Text("English", fontWeight = FontWeight.Bold) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = LimeAccent, selectedLabelColor = CharcoalBackground),
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = jrConfig.voiceLanguage == com.example.jumprope.VoiceLanguage.KHMER,
+                            onClick = { viewModel.updateJumpRopeConfig(jrConfig.copy(voiceLanguage = com.example.jumprope.VoiceLanguage.KHMER)) },
+                            label = { Text("ភាសាខ្មែរ", fontWeight = FontWeight.Bold) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = LimeAccent, selectedLabelColor = CharcoalBackground),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // Voice Counting Mode
+                    Text(
+                        text = viewModel.str(StringKey.JR_VOICE_COUNTING),
+                        style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FilterChip(
+                            selected = jrConfig.voiceCountingMode == com.example.jumprope.VoiceCountingMode.EVERY_JUMP,
+                            onClick = { viewModel.updateJumpRopeConfig(jrConfig.copy(voiceCountingMode = com.example.jumprope.VoiceCountingMode.EVERY_JUMP)) },
+                            label = { Text(viewModel.str(StringKey.JR_COUNT_EVERY_JUMP), fontWeight = FontWeight.Bold) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = LimeAccent, selectedLabelColor = CharcoalBackground),
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = jrConfig.voiceCountingMode == com.example.jumprope.VoiceCountingMode.MILESTONES,
+                            onClick = { viewModel.updateJumpRopeConfig(jrConfig.copy(voiceCountingMode = com.example.jumprope.VoiceCountingMode.MILESTONES)) },
+                            label = { Text(viewModel.str(StringKey.JR_COUNT_MILESTONES), fontWeight = FontWeight.Bold) },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = LimeAccent, selectedLabelColor = CharcoalBackground),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // Milestone Interval
+                    if (jrConfig.voiceCountingMode == com.example.jumprope.VoiceCountingMode.MILESTONES) {
+                        Text(
+                            text = "${viewModel.str(StringKey.JR_MILESTONE_INTERVAL)}: ${jrConfig.customMilestoneInterval} jumps",
+                            style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(10, 50, 100, 200).forEach { interval ->
+                                FilterChip(
+                                    selected = jrConfig.customMilestoneInterval == interval,
+                                    onClick = { viewModel.updateJumpRopeConfig(jrConfig.copy(customMilestoneInterval = interval)) },
+                                    label = { Text("$interval") },
+                                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = LimeAccent, selectedLabelColor = CharcoalBackground)
+                                )
+                            }
+                        }
+                    }
+
+                    // Default Rest Duration
+                    Text(
+                        text = "${viewModel.str(StringKey.JR_REST_TITLE)}: ${jrConfig.restDurationSeconds}s",
+                        style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(15, 30, 45, 60, 90).forEach { rest ->
+                            FilterChip(
+                                selected = jrConfig.restDurationSeconds == rest,
+                                onClick = { viewModel.updateJumpRopeConfig(jrConfig.copy(restDurationSeconds = rest)) },
+                                label = { Text("${rest}s") },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = LimeAccent, selectedLabelColor = CharcoalBackground)
+                            )
+                        }
+                    }
+
+                    // Default Rounds
+                    Text(
+                        text = "${viewModel.str(StringKey.JR_ROUNDS_TITLE)}: ${jrConfig.rounds}",
+                        style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(1, 3, 5, 8, 10).forEach { r ->
+                            FilterChip(
+                                selected = jrConfig.rounds == r,
+                                onClick = { viewModel.updateJumpRopeConfig(jrConfig.copy(rounds = r)) },
+                                label = { Text("$r") },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = LimeAccent, selectedLabelColor = CharcoalBackground)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // In-App Feature Updates (Over-The-Air without APK Reinstallation)
         item {
             val dynamicFeatureStatus by viewModel.dynamicFeatureStatus.collectAsState()

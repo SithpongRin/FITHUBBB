@@ -36,6 +36,16 @@ data class WorkoutEntity(
     val jumpCount: Int = 0,
     val totalVolumeKg: Double = 0.0,
     val totalReps: Int = 0,
+    val goalType: String = "",
+    val goalName: String = "",
+    val targetType: String = "",
+    val targetValue: Int = 0,
+    val roundsTotal: Int = 0,
+    val roundsCompleted: Int = 0,
+    val restDurationSeconds: Int = 0,
+    val activeDurationSeconds: Long = 0L,
+    val restDurationTotalSeconds: Long = 0L,
+    val completionStatus: String = "COMPLETED", // COMPLETED, PARTIALLY_COMPLETED, CANCELLED
     val localDate: String, // YYYY-MM-DD
     val tzOffsetMinutes: Int = 0,
     val notes: String = "",
@@ -165,6 +175,8 @@ data class ActiveSessionEntity(
     val jumpCount: Int = 0,
     val caloriesBurned: Double = 0.0,
     val serializedSets: String = "", // JSON or comma-separated sets
+    val jumpRopeConfigJson: String = "", // Serialized JumpRopeConfig JSON
+    val jumpRopeStateJson: String = "", // Serialized JumpRopeSessionState JSON
     val lastUpdated: Long = System.currentTimeMillis()
 )
 

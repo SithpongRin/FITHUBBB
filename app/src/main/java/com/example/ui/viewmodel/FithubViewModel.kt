@@ -17,6 +17,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -54,7 +55,19 @@ data class ActiveWorkoutUiState(
     val caloriesBurned: Double = 0.0,
     val exercises: List<WeightliftingExerciseDraft> = emptyList(),
     val restTimerRemainingSeconds: Int = 0,
-    val isRestTimerActive: Boolean = false
+    val isRestTimerActive: Boolean = false,
+    // Jump Rope Goal-Based Training System fields
+    val jumpRopeConfig: com.example.jumprope.JumpRopeConfig = com.example.jumprope.JumpRopeConfig(),
+    val jumpRopeState: com.example.jumprope.JumpRopeWorkoutState = com.example.jumprope.JumpRopeWorkoutState.IDLE,
+    val currentRound: Int = 1,
+    val totalRounds: Int = 3,
+    val currentRoundJumps: Int = 0,
+    val totalSessionJumps: Int = 0,
+    val activeDurationSeconds: Long = 0L,
+    val restDurationTotalSeconds: Long = 0L,
+    val remainingWorkSeconds: Int = 0,
+    val remainingRestSeconds: Int = 0,
+    val lastAlertedRoundJumpCount: Int = 0
 )
 
 class FithubViewModel(application: Application) : AndroidViewModel(application) {
@@ -70,6 +83,45 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
     )
     val isDarkMode = MutableStateFlow(appPrefs.getBoolean("is_dark_mode", true))
     val unitSystem = MutableStateFlow(FormatUtils.UnitSystem.METRIC)
+
+    // Jump Rope Training Configuration State & User Preferences
+    private val jumpRopePrefs = application.getSharedPreferences("fithub_jump_rope_prefs", Context.MODE_PRIVATE)
+
+    val jumpRopeConfig = MutableStateFlow(
+        com.example.jumprope.JumpRopeConfig(
+            goalType = com.example.jumprope.JumpRopeGoalType.fromString(jumpRopePrefs.getString("jr_goal_type", "GENERAL_HEALTH")),
+            customGoalName = jumpRopePrefs.getString("jr_custom_goal_name", "") ?: "",
+            targetType = com.example.jumprope.JumpRopeTargetType.fromString(jumpRopePrefs.getString("jr_target_type", "REPS")),
+            targetValue = jumpRopePrefs.getInt("jr_target_value", 100),
+            rounds = jumpRopePrefs.getInt("jr_rounds", 3),
+            restDurationSeconds = jumpRopePrefs.getInt("jr_rest_duration", 30),
+            voiceLanguage = com.example.jumprope.VoiceLanguage.fromCode(jumpRopePrefs.getString("jr_voice_language", "en")),
+            voiceCountingMode = com.example.jumprope.VoiceCountingMode.fromString(jumpRopePrefs.getString("jr_voice_mode", "MILESTONES")),
+            customMilestoneInterval = jumpRopePrefs.getInt("jr_milestone_interval", 50)
+        )
+    )
+
+    fun updateJumpRopeConfig(newConfig: com.example.jumprope.JumpRopeConfig) {
+        jumpRopeConfig.value = newConfig
+        jumpRopePrefs.edit()
+            .putString("jr_goal_type", newConfig.goalType.name)
+            .putString("jr_custom_goal_name", newConfig.customGoalName)
+            .putString("jr_target_type", newConfig.targetType.name)
+            .putInt("jr_target_value", newConfig.targetValue)
+            .putInt("jr_rounds", newConfig.rounds)
+            .putInt("jr_rest_duration", newConfig.restDurationSeconds)
+            .putString("jr_voice_language", newConfig.voiceLanguage.code)
+            .putString("jr_voice_mode", newConfig.voiceCountingMode.name)
+            .putInt("jr_milestone_interval", newConfig.customMilestoneInterval)
+            .apply()
+    }
+
+    fun selectJumpRopeGoal(goalType: com.example.jumprope.JumpRopeGoalType) {
+        val preset = com.example.jumprope.JumpRopePresets.getPreset(goalType)
+        // Maintain user's voice language preference
+        val merged = preset.copy(voiceLanguage = jumpRopeConfig.value.voiceLanguage)
+        updateJumpRopeConfig(merged)
+    }
 
     fun setLanguage(language: AppLanguage) {
         appLanguage.value = language
@@ -259,9 +311,92 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun serializeJumpRopeConfig(config: com.example.jumprope.JumpRopeConfig): String {
+        return try {
+            JSONObject().apply {
+                put("goalType", config.goalType.name)
+                put("customGoalName", config.customGoalName)
+                put("targetType", config.targetType.name)
+                put("targetValue", config.targetValue)
+                put("rounds", config.rounds)
+                put("restDurationSeconds", config.restDurationSeconds)
+                put("voiceLanguage", config.voiceLanguage.code)
+                put("voiceCountingMode", config.voiceCountingMode.name)
+                put("customMilestoneInterval", config.customMilestoneInterval)
+            }.toString()
+        } catch (_: Throwable) { "" }
+    }
+
+    private fun deserializeJumpRopeConfig(jsonStr: String): com.example.jumprope.JumpRopeConfig {
+        if (jsonStr.isBlank()) return com.example.jumprope.JumpRopeConfig()
+        return try {
+            val json = JSONObject(jsonStr)
+            com.example.jumprope.JumpRopeConfig(
+                goalType = com.example.jumprope.JumpRopeGoalType.fromString(json.optString("goalType")),
+                customGoalName = json.optString("customGoalName", ""),
+                targetType = com.example.jumprope.JumpRopeTargetType.fromString(json.optString("targetType")),
+                targetValue = json.optInt("targetValue", 100),
+                rounds = json.optInt("rounds", 3),
+                restDurationSeconds = json.optInt("restDurationSeconds", 30),
+                voiceLanguage = com.example.jumprope.VoiceLanguage.fromCode(json.optString("voiceLanguage", "en")),
+                voiceCountingMode = com.example.jumprope.VoiceCountingMode.fromString(json.optString("voiceCountingMode")),
+                customMilestoneInterval = json.optInt("customMilestoneInterval", 50)
+            )
+        } catch (_: Throwable) { com.example.jumprope.JumpRopeConfig() }
+    }
+
+    private fun serializeJumpRopeState(state: ActiveWorkoutUiState): String {
+        return try {
+            JSONObject().apply {
+                put("state", state.jumpRopeState.name)
+                put("currentRound", state.currentRound)
+                put("totalRounds", state.totalRounds)
+                put("currentRoundJumps", state.currentRoundJumps)
+                put("totalSessionJumps", state.totalSessionJumps)
+                put("activeDurationSeconds", state.activeDurationSeconds)
+                put("restDurationTotalSeconds", state.restDurationTotalSeconds)
+                put("remainingWorkSeconds", state.remainingWorkSeconds)
+                put("remainingRestSeconds", state.remainingRestSeconds)
+                put("lastAlertedRoundJumpCount", state.lastAlertedRoundJumpCount)
+            }.toString()
+        } catch (_: Throwable) { "" }
+    }
+
     fun resumeRecoveredSession() {
         val session = recoveredSessionAvailable.value ?: return
         recoveredSessionAvailable.value = null
+
+        val jrConfig = if (session.type == "JUMPING" && session.jumpRopeConfigJson.isNotBlank()) {
+            deserializeJumpRopeConfig(session.jumpRopeConfigJson)
+        } else com.example.jumprope.JumpRopeConfig()
+
+        var jrState = com.example.jumprope.JumpRopeWorkoutState.WORKOUT
+        var curRound = 1
+        var totRounds = jrConfig.rounds
+        var curRoundJumps = 0
+        var totSessionJumps = session.jumpCount
+        var actSecs = session.elapsedSeconds
+        var restTotSecs = 0L
+        var remWork = 0
+        var remRest = 0
+        var lastAlerted = 0
+
+        if (session.type == "JUMPING" && session.jumpRopeStateJson.isNotBlank()) {
+            try {
+                val json = JSONObject(session.jumpRopeStateJson)
+                jrState = try { com.example.jumprope.JumpRopeWorkoutState.valueOf(json.optString("state", "WORKOUT")) } catch (_: Throwable) { com.example.jumprope.JumpRopeWorkoutState.WORKOUT }
+                curRound = json.optInt("currentRound", 1)
+                totRounds = json.optInt("totalRounds", jrConfig.rounds)
+                curRoundJumps = json.optInt("currentRoundJumps", 0)
+                totSessionJumps = json.optInt("totalSessionJumps", session.jumpCount)
+                actSecs = json.optLong("activeDurationSeconds", session.elapsedSeconds)
+                restTotSecs = json.optLong("restDurationTotalSeconds", 0L)
+                remWork = json.optInt("remainingWorkSeconds", 0)
+                remRest = json.optInt("remainingRestSeconds", 0)
+                lastAlerted = json.optInt("lastAlertedRoundJumpCount", 0)
+            } catch (_: Throwable) {}
+        }
+
         activeWorkout.value = ActiveWorkoutUiState(
             isActive = true,
             isPaused = session.isPaused,
@@ -269,8 +404,19 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
             startTime = session.startTime,
             elapsedSeconds = session.elapsedSeconds,
             distanceMeters = session.distanceMeters,
-            jumpCount = session.jumpCount,
-            caloriesBurned = session.caloriesBurned
+            jumpCount = if (session.type == "JUMPING") curRoundJumps else session.jumpCount,
+            caloriesBurned = session.caloriesBurned,
+            jumpRopeConfig = jrConfig,
+            jumpRopeState = jrState,
+            currentRound = curRound,
+            totalRounds = totRounds,
+            currentRoundJumps = curRoundJumps,
+            totalSessionJumps = totSessionJumps,
+            activeDurationSeconds = actSecs,
+            restDurationTotalSeconds = restTotSecs,
+            remainingWorkSeconds = remWork,
+            remainingRestSeconds = remRest,
+            lastAlertedRoundJumpCount = lastAlerted
         )
         currentTab.value = ScreenTab.WORKOUT
         startTimerLoop()
@@ -327,6 +473,14 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
         workoutCountdownType.value = null
     }
 
+    // Voice Coach for Jump Rope
+    private val jumpRopeVoiceCoach = com.example.jumprope.JumpRopeVoiceCoach(application)
+
+    override fun onCleared() {
+        super.onCleared()
+        jumpRopeVoiceCoach.shutdown()
+    }
+
     private fun executeStartWorkout(type: String) {
         val now = System.currentTimeMillis()
         val defaultExercises = if (type == "WEIGHTLIFTING") {
@@ -351,6 +505,10 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
             )
         } else emptyList()
 
+        val jrCfg = if (type == "JUMPING") jumpRopeConfig.value else com.example.jumprope.JumpRopeConfig()
+        val initialJrState = if (type == "JUMPING") com.example.jumprope.JumpRopeWorkoutState.WORKOUT else com.example.jumprope.JumpRopeWorkoutState.IDLE
+        val workSecs = if (jrCfg.targetType == com.example.jumprope.JumpRopeTargetType.TIME) jrCfg.targetValue else 0
+
         activeWorkout.value = ActiveWorkoutUiState(
             isActive = true,
             isPaused = false,
@@ -360,7 +518,18 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
             distanceMeters = 0.0,
             jumpCount = 0,
             caloriesBurned = 0.0,
-            exercises = defaultExercises
+            exercises = defaultExercises,
+            jumpRopeConfig = jrCfg,
+            jumpRopeState = initialJrState,
+            currentRound = 1,
+            totalRounds = jrCfg.rounds,
+            currentRoundJumps = 0,
+            totalSessionJumps = 0,
+            activeDurationSeconds = 0L,
+            restDurationTotalSeconds = 0L,
+            remainingWorkSeconds = workSecs,
+            remainingRestSeconds = 0,
+            lastAlertedRoundJumpCount = 0
         )
         currentTab.value = ScreenTab.WORKOUT
         com.example.services.WorkoutForegroundService.startService(getApplication(), type)
@@ -377,41 +546,162 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
                     val newSeconds = current.elapsedSeconds + 1
                     val weight = profile.value?.weightKg ?: 70.0
 
-                    // Compute live calories strictly based on actual physical movements (no phantom calories while idle)
-                    val calories = calculateActiveWorkoutCalories(current, weight)
-
-                    activeWorkout.value = current.copy(
-                        elapsedSeconds = newSeconds,
-                        caloriesBurned = calories
-                    )
-
-                    // Live update ongoing notification in phone's notification bar
-                    com.example.services.WorkoutForegroundService.updateMetrics(
-                        getApplication(),
-                        current.type,
-                        newSeconds,
-                        calories,
-                        current.distanceMeters,
-                        current.jumpCount,
-                        isPaused = false
-                    )
-
-                    // Periodically persist active session
-                    if (newSeconds % 5 == 0L) {
-                        repository.saveActiveSession(
-                            ActiveSessionEntity(
-                                type = current.type,
-                                startTime = current.startTime,
-                                elapsedSeconds = newSeconds,
-                                isPaused = current.isPaused,
-                                distanceMeters = current.distanceMeters,
-                                jumpCount = current.jumpCount,
-                                caloriesBurned = calories
-                            )
+                    if (current.type == "JUMPING") {
+                        handleJumpRopeTimerTick(current, newSeconds, weight)
+                    } else {
+                        val calories = calculateActiveWorkoutCalories(current, weight)
+                        activeWorkout.value = current.copy(
+                            elapsedSeconds = newSeconds,
+                            caloriesBurned = calories
                         )
+
+                        com.example.services.WorkoutForegroundService.updateMetrics(
+                            getApplication(),
+                            current.type,
+                            newSeconds,
+                            calories,
+                            current.distanceMeters,
+                            current.jumpCount,
+                            isPaused = false
+                        )
+
+                        if (newSeconds % 5 == 0L) {
+                            saveActiveSessionToDb(activeWorkout.value)
+                        }
                     }
                 }
             }
+        }
+    }
+
+    private fun handleJumpRopeTimerTick(current: ActiveWorkoutUiState, newSeconds: Long, weight: Double) {
+        val safeWeight = if (weight > 0) weight else 70.0
+        val calories = if (current.totalSessionJumps <= 0) 0.0 else current.totalSessionJumps * (safeWeight / 70.0) * 0.17
+
+        when (current.jumpRopeState) {
+            com.example.jumprope.JumpRopeWorkoutState.WORKOUT -> {
+                val newActiveSecs = current.activeDurationSeconds + 1
+                if (current.jumpRopeConfig.targetType == com.example.jumprope.JumpRopeTargetType.TIME) {
+                    val remWork = current.remainingWorkSeconds - 1
+                    if (remWork <= 0) {
+                        // Work interval complete
+                        onJumpRopeRoundTargetReached(current.copy(
+                            elapsedSeconds = newSeconds,
+                            activeDurationSeconds = newActiveSecs,
+                            remainingWorkSeconds = 0,
+                            caloriesBurned = calories
+                        ))
+                        return
+                    } else {
+                        activeWorkout.value = current.copy(
+                            elapsedSeconds = newSeconds,
+                            activeDurationSeconds = newActiveSecs,
+                            remainingWorkSeconds = remWork,
+                            caloriesBurned = calories
+                        )
+                    }
+                } else {
+                    activeWorkout.value = current.copy(
+                        elapsedSeconds = newSeconds,
+                        activeDurationSeconds = newActiveSecs,
+                        caloriesBurned = calories
+                    )
+                }
+            }
+
+            com.example.jumprope.JumpRopeWorkoutState.REST -> {
+                val newRestTotal = current.restDurationTotalSeconds + 1
+                val remRest = current.remainingRestSeconds - 1
+                if (remRest <= 0) {
+                    // Rest finished -> Start next round
+                    val nextRound = current.currentRound + 1
+                    jumpRopeVoiceCoach.speakRestComplete(nextRound, current.jumpRopeConfig.voiceLanguage)
+                    val nextWorkSecs = if (current.jumpRopeConfig.targetType == com.example.jumprope.JumpRopeTargetType.TIME) {
+                        current.jumpRopeConfig.targetValue
+                    } else 0
+
+                    activeWorkout.value = current.copy(
+                        elapsedSeconds = newSeconds,
+                        restDurationTotalSeconds = newRestTotal,
+                        currentRound = nextRound,
+                        currentRoundJumps = 0,
+                        lastAlertedRoundJumpCount = 0,
+                        remainingWorkSeconds = nextWorkSecs,
+                        remainingRestSeconds = 0,
+                        jumpRopeState = com.example.jumprope.JumpRopeWorkoutState.WORKOUT,
+                        caloriesBurned = calories
+                    )
+                } else {
+                    activeWorkout.value = current.copy(
+                        elapsedSeconds = newSeconds,
+                        restDurationTotalSeconds = newRestTotal,
+                        remainingRestSeconds = remRest,
+                        caloriesBurned = calories
+                    )
+                }
+            }
+
+            else -> {
+                activeWorkout.value = current.copy(
+                    elapsedSeconds = newSeconds,
+                    caloriesBurned = calories
+                )
+            }
+        }
+
+        val updated = activeWorkout.value
+        com.example.services.WorkoutForegroundService.updateMetrics(
+            getApplication(),
+            updated.type,
+            updated.elapsedSeconds,
+            updated.caloriesBurned,
+            0.0,
+            updated.totalSessionJumps,
+            isPaused = false
+        )
+
+        if (newSeconds % 5 == 0L) {
+            saveActiveSessionToDb(updated)
+        }
+    }
+
+    private fun onJumpRopeRoundTargetReached(current: ActiveWorkoutUiState) {
+        val isFinal = current.currentRound >= current.jumpRopeConfig.rounds
+        if (isFinal) {
+            // All rounds completed!
+            jumpRopeVoiceCoach.speakWorkoutComplete(current.jumpRopeConfig.voiceLanguage)
+            activeWorkout.value = current.copy(
+                jumpRopeState = com.example.jumprope.JumpRopeWorkoutState.COMPLETED
+            )
+            finishWorkout()
+        } else {
+            // Enter REST state
+            val restSecs = current.jumpRopeConfig.restDurationSeconds
+            jumpRopeVoiceCoach.speakTargetReached(restSecs, false, current.jumpRopeConfig.voiceLanguage)
+            activeWorkout.value = current.copy(
+                jumpRopeState = com.example.jumprope.JumpRopeWorkoutState.REST,
+                remainingRestSeconds = restSecs
+            )
+        }
+    }
+
+    private fun saveActiveSessionToDb(current: ActiveWorkoutUiState) {
+        viewModelScope.launch {
+            val cfgJson = if (current.type == "JUMPING") serializeJumpRopeConfig(current.jumpRopeConfig) else ""
+            val stJson = if (current.type == "JUMPING") serializeJumpRopeState(current) else ""
+            repository.saveActiveSession(
+                ActiveSessionEntity(
+                    type = current.type,
+                    startTime = current.startTime,
+                    elapsedSeconds = current.elapsedSeconds,
+                    isPaused = current.isPaused,
+                    distanceMeters = current.distanceMeters,
+                    jumpCount = if (current.type == "JUMPING") current.totalSessionJumps else current.jumpCount,
+                    caloriesBurned = current.caloriesBurned,
+                    jumpRopeConfigJson = cfgJson,
+                    jumpRopeStateJson = stJson
+                )
+            )
         }
     }
 
@@ -452,12 +742,25 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun pauseWorkout() {
-        activeWorkout.value = activeWorkout.value.copy(isPaused = true)
+        val current = activeWorkout.value
+        val newJrState = if (current.type == "JUMPING") com.example.jumprope.JumpRopeWorkoutState.PAUSED else current.jumpRopeState
+        activeWorkout.value = current.copy(
+            isPaused = true,
+            jumpRopeState = newJrState
+        )
         com.example.services.WorkoutForegroundService.pauseService(getApplication())
     }
 
     fun resumeWorkout() {
-        activeWorkout.value = activeWorkout.value.copy(isPaused = false)
+        val current = activeWorkout.value
+        val newJrState = if (current.type == "JUMPING") {
+            if (current.remainingRestSeconds > 0) com.example.jumprope.JumpRopeWorkoutState.REST
+            else com.example.jumprope.JumpRopeWorkoutState.WORKOUT
+        } else current.jumpRopeState
+        activeWorkout.value = current.copy(
+            isPaused = false,
+            jumpRopeState = newJrState
+        )
         com.example.services.WorkoutForegroundService.resumeService(getApplication())
     }
 
@@ -477,13 +780,71 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
     fun updateJumpCount(count: Int) {
         if (!activeWorkout.value.isActive || activeWorkout.value.isPaused) return
         val current = activeWorkout.value
-        val weight = profile.value?.weightKg ?: 70.0
-        val safeCount = maxOf(0, count)
-        val newCalories = if (safeCount <= 0) 0.0 else safeCount * (weight / 70.0) * 0.17
-        activeWorkout.value = activeWorkout.value.copy(
-            jumpCount = safeCount,
-            caloriesBurned = newCalories
-        )
+
+        if (current.type == "JUMPING") {
+            // Guard: Sensor events during REST must NOT count toward the active work target
+            if (current.jumpRopeState != com.example.jumprope.JumpRopeWorkoutState.WORKOUT) {
+                return
+            }
+
+            val safeCount = maxOf(0, count)
+            val weight = profile.value?.weightKg ?: 70.0
+            val safeWeight = if (weight > 0) weight else 70.0
+
+            // In our system, the JumpDetector passes the round count
+            val roundJumps = safeCount
+            val totalJumps = current.totalSessionJumps + (roundJumps - current.currentRoundJumps)
+            val newCalories = if (totalJumps <= 0) 0.0 else totalJumps * (safeWeight / 70.0) * 0.17
+
+            // Voice Coach announcements
+            when (current.jumpRopeConfig.voiceCountingMode) {
+                com.example.jumprope.VoiceCountingMode.EVERY_JUMP -> {
+                    if (roundJumps > current.currentRoundJumps) {
+                        jumpRopeVoiceCoach.speakCount(roundJumps, current.jumpRopeConfig.voiceLanguage)
+                    }
+                }
+                com.example.jumprope.VoiceCountingMode.MILESTONES -> {
+                    val interval = if (current.jumpRopeConfig.customMilestoneInterval > 0) current.jumpRopeConfig.customMilestoneInterval else 50
+                    val isDefaultMilestone = roundJumps == 10 || roundJumps == 50 || (roundJumps > 0 && roundJumps % interval == 0)
+                    if (isDefaultMilestone && roundJumps > current.lastAlertedRoundJumpCount) {
+                        jumpRopeVoiceCoach.speakMilestone(roundJumps, current.jumpRopeConfig.voiceLanguage)
+                    }
+                }
+            }
+
+            val lastAlerted = if (roundJumps > current.lastAlertedRoundJumpCount &&
+                (roundJumps == 10 || roundJumps == 50 || (roundJumps > 0 && roundJumps % current.jumpRopeConfig.customMilestoneInterval == 0))) {
+                roundJumps
+            } else current.lastAlertedRoundJumpCount
+
+            // Check if Reps target reached
+            if (current.jumpRopeConfig.targetType == com.example.jumprope.JumpRopeTargetType.REPS &&
+                roundJumps >= current.jumpRopeConfig.targetValue) {
+                onJumpRopeRoundTargetReached(current.copy(
+                    jumpCount = roundJumps,
+                    currentRoundJumps = roundJumps,
+                    totalSessionJumps = totalJumps,
+                    caloriesBurned = newCalories,
+                    lastAlertedRoundJumpCount = lastAlerted
+                ))
+            } else {
+                activeWorkout.value = current.copy(
+                    jumpCount = roundJumps,
+                    currentRoundJumps = roundJumps,
+                    totalSessionJumps = totalJumps,
+                    caloriesBurned = newCalories,
+                    lastAlertedRoundJumpCount = lastAlerted
+                )
+            }
+        } else {
+            val weight = profile.value?.weightKg ?: 70.0
+            val safeCount = maxOf(0, count)
+            val newCalories = if (safeCount <= 0) 0.0 else safeCount * (weight / 70.0) * 0.17
+            activeWorkout.value = current.copy(
+                jumpCount = safeCount,
+                caloriesBurned = newCalories
+            )
+        }
     }
 
     fun toggleSetCompleted(exerciseId: String, setIndex: Int) {
@@ -533,8 +894,29 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun skipRestTimer() {
+        if (activeWorkout.value.type == "JUMPING" && activeWorkout.value.jumpRopeState == com.example.jumprope.JumpRopeWorkoutState.REST) {
+            skipJumpRopeRest()
+            return
+        }
         restTimerJob?.cancel()
         activeWorkout.value = activeWorkout.value.copy(isRestTimerActive = false, restTimerRemainingSeconds = 0)
+    }
+
+    fun skipJumpRopeRest() {
+        val current = activeWorkout.value
+        if (current.type != "JUMPING" || current.jumpRopeState != com.example.jumprope.JumpRopeWorkoutState.REST) return
+        val nextRound = current.currentRound + 1
+        jumpRopeVoiceCoach.speakRestComplete(nextRound, current.jumpRopeConfig.voiceLanguage)
+        val workSecs = if (current.jumpRopeConfig.targetType == com.example.jumprope.JumpRopeTargetType.TIME) current.jumpRopeConfig.targetValue else 0
+        activeWorkout.value = current.copy(
+            currentRound = nextRound,
+            currentRoundJumps = 0,
+            jumpCount = 0,
+            lastAlertedRoundJumpCount = 0,
+            remainingWorkSeconds = workSecs,
+            remainingRestSeconds = 0,
+            jumpRopeState = com.example.jumprope.JumpRopeWorkoutState.WORKOUT
+        )
     }
 
     fun finishWorkout(customTitle: String = "") {
@@ -586,6 +968,26 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
 
+            val completionStatus = if (current.type == "JUMPING") {
+                if (current.currentRound >= current.jumpRopeConfig.rounds &&
+                    (current.jumpRopeConfig.targetType == com.example.jumprope.JumpRopeTargetType.TIME || current.currentRoundJumps >= current.jumpRopeConfig.targetValue)) {
+                    "COMPLETED"
+                } else if (current.totalSessionJumps > 0 || current.activeDurationSeconds > 0) {
+                    "PARTIALLY_COMPLETED"
+                } else {
+                    "CANCELLED"
+                }
+            } else "COMPLETED"
+
+            val workoutNotes = if (customTitle.isNotBlank()) customTitle
+            else if (current.type == "JUMPING") {
+                val goalDesc = if (current.jumpRopeConfig.goalType == com.example.jumprope.JumpRopeGoalType.CUSTOM) current.jumpRopeConfig.effectiveGoalNameEn
+                else current.jumpRopeConfig.goalType.defaultNameEn
+                val targetDesc = if (current.jumpRopeConfig.targetType == com.example.jumprope.JumpRopeTargetType.REPS) "${current.jumpRopeConfig.targetValue} jumps x ${current.jumpRopeConfig.rounds} rounds"
+                else "${current.jumpRopeConfig.targetValue}s x ${current.jumpRopeConfig.rounds} rounds"
+                "$goalDesc ($targetDesc)"
+            } else current.type
+
             val workout = WorkoutEntity(
                 id = workoutId,
                 type = current.type,
@@ -595,11 +997,21 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
                 caloriesBurned = current.caloriesBurned,
                 distanceMeters = current.distanceMeters,
                 averagePaceSecPerKm = pace,
-                jumpCount = current.jumpCount,
+                jumpCount = if (current.type == "JUMPING") current.totalSessionJumps else current.jumpCount,
                 totalVolumeKg = totalVolume,
                 totalReps = totalReps,
+                goalType = if (current.type == "JUMPING") current.jumpRopeConfig.goalType.name else "",
+                goalName = if (current.type == "JUMPING") current.jumpRopeConfig.effectiveGoalNameEn else "",
+                targetType = if (current.type == "JUMPING") current.jumpRopeConfig.targetType.name else "",
+                targetValue = if (current.type == "JUMPING") current.jumpRopeConfig.targetValue else 0,
+                roundsTotal = if (current.type == "JUMPING") current.jumpRopeConfig.rounds else 0,
+                roundsCompleted = if (current.type == "JUMPING") (if (completionStatus == "COMPLETED") current.jumpRopeConfig.rounds else current.currentRound) else 0,
+                restDurationSeconds = if (current.type == "JUMPING") current.jumpRopeConfig.restDurationSeconds else 0,
+                activeDurationSeconds = if (current.type == "JUMPING") current.activeDurationSeconds else current.elapsedSeconds,
+                restDurationTotalSeconds = if (current.type == "JUMPING") current.restDurationTotalSeconds else 0L,
+                completionStatus = completionStatus,
                 localDate = todayDateString,
-                notes = customTitle.ifBlank { current.type }
+                notes = workoutNotes
             )
 
             repository.saveWorkout(workout, exerciseEntities, setEntities)
