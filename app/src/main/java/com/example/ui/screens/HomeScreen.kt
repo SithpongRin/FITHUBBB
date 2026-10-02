@@ -170,7 +170,7 @@ fun HomeScreen(
             .fillMaxSize()
             .padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(top = 18.dp, bottom = 100.dp)
+        contentPadding = PaddingValues(top = 18.dp, bottom = 120.dp)
     ) {
         // 1. Sleek Command Bar Header
         item {
@@ -283,7 +283,7 @@ fun HomeScreen(
                                     is UpdateStatus.Available -> if (isKm) "មាន Update" else "Update"
                                     is UpdateStatus.Downloading -> "${(updateStatus as UpdateStatus.Downloading).progressPercent}%"
                                     is UpdateStatus.ReadyToInstall -> if (isKm) "ដំឡើង" else "Install"
-                                    else -> "v1.0.5"
+                                    else -> "v1.0.6"
                                 },
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,

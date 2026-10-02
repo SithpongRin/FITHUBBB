@@ -61,7 +61,8 @@ fun WalkingActivityHeroCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(26.dp))
             .testTag("hero_today_activity_card"),
-        colors = CardDefaults.cardColors(containerColor = LimeAccent),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, LimeAccent.copy(alpha = 0.45f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -82,15 +83,15 @@ fun WalkingActivityHeroCard(
                             .size(10.dp)
                             .clip(CircleShape)
                             .background(
-                                if (isTrackingEnabled) CharcoalBackground.copy(alpha = pulseAlpha)
-                                else CharcoalBackground.copy(alpha = 0.3f)
+                                if (isTrackingEnabled) LimeAccent.copy(alpha = pulseAlpha)
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                             )
                     )
                     Text(
                         text = if (isKm) "ការដើរប្រចាំថ្ងៃ" else "Daily Walking",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = CharcoalBackground,
+                            color = MaterialTheme.colorScheme.onSurface,
                             letterSpacing = 0.5.sp
                         )
                     )
@@ -100,7 +101,8 @@ fun WalkingActivityHeroCard(
                 Row(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(CharcoalBackground)
+                        .background(LimeAccent.copy(alpha = 0.18f))
+                        .border(1.dp, LimeAccent.copy(alpha = 0.4f), CircleShape)
                         .padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -115,7 +117,7 @@ fun WalkingActivityHeroCard(
                         text = "$streakDays ${if (isKm) "ថ្ងៃ" else "Days"}",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = LimeAccent
                         )
                     )
                 }
@@ -134,14 +136,14 @@ fun WalkingActivityHeroCard(
                         text = String.format(java.util.Locale.US, "%,d", stepCount),
                         style = MaterialTheme.typography.headlineLarge.copy(
                             fontWeight = FontWeight.Black,
-                            fontSize = 38.sp,
-                            color = CharcoalBackground
+                            fontSize = 42.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
                     Text(
                         text = "${if (isKm) "គោលដៅ" else "Goal"}: ${String.format(java.util.Locale.US, "%,d", stepGoal)} ${if (isKm) "ជំហាន" else "steps"}",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = CharcoalBackground.copy(alpha = 0.85f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.SemiBold
                         )
                     )
@@ -150,7 +152,7 @@ fun WalkingActivityHeroCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(CharcoalBackground.copy(alpha = 0.15f))
+                        .background(LimeAccent)
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
@@ -163,20 +165,20 @@ fun WalkingActivityHeroCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Animated Smooth Progress Bar
             LinearProgressIndicator(
                 progress = { animatedProgress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(10.dp)
+                    .height(8.dp)
                     .clip(CircleShape),
-                color = CharcoalBackground,
-                trackColor = CharcoalBackground.copy(alpha = 0.2f)
+                color = LimeAccent,
+                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Bottom Sub-metrics: Distance & Calories Burned
             Row(
@@ -186,40 +188,48 @@ fun WalkingActivityHeroCard(
             ) {
                 // Distance Walked
                 Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.DirectionsWalk,
                         contentDescription = "Distance",
-                        tint = CharcoalBackground,
+                        tint = Color(0xFF00E5FF),
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
                         text = String.format(java.util.Locale.US, "%.2f km", distanceMeters / 1000.0),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = CharcoalBackground
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
                 }
 
                 // Calories Burned
                 Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.LocalFireDepartment,
                         contentDescription = "Calories",
-                        tint = CharcoalBackground,
+                        tint = Color(0xFFFFAB00),
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
                         text = String.format(java.util.Locale.US, "%.0f kcal", caloriesBurned),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = CharcoalBackground
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     )
                 }

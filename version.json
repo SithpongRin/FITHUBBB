@@ -1,9 +1,9 @@
 {
-  "versionCode": 6,
-  "versionName": "1.0.5",
+  "versionCode": 7,
+  "versionName": "1.0.6",
   "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk",
-  "releaseNotesEn": "Update v1.0.5: Instant Home Screen update banner and notification, full external Cloud Sync server persistence across devices, and luxury sports UI modernization.",
-  "releaseNotesKm": "កំណែថ្មី v1.0.5៖ បង្ហាញផ្ទាំង Update លើ Home Screen ភ្លាមៗ, ប្រព័ន្ធ Cloud Sync លើ Server ខាងក្រៅពេញលេញមិនបាត់ទិន្នន័យ, និង UI កីឡាទំនើបស៊ីវិល័យ។",
-  "fileSizeBytes": 29300000,
+  "releaseNotesEn": "Update v1.0.6: Luxury Obsidian Sport UI redesign, interactive workout history detail breakdown (jumps, cadence, tonnage), and progress vs yesterday progression analytics.",
+  "releaseNotesKm": "កំណែថ្មី v1.0.6៖ កែលម្អ UI កីឡាទំនើប Obsidian Sport, បន្ថែមផ្ទាំង Detail មើលចំនួនលោតអន្ទាក់/ល្បឿន/ទម្ងន់ក្នុង History, និងមុខងារប្រៀបធៀប Progress ល្អជាងម្សិលមិញ។",
+  "fileSizeBytes": 28860000,
   "mandatory": false
 }

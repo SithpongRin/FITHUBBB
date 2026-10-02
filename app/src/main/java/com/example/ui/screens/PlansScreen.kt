@@ -50,7 +50,7 @@ fun PlansScreen(
             .fillMaxSize()
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
-        contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp)
+        contentPadding = PaddingValues(top = 24.dp, bottom = 120.dp)
     ) {
         item {
             Row(

@@ -176,7 +176,7 @@ fun WorkoutIdleView(
             .fillMaxSize()
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp)
+        contentPadding = PaddingValues(top = 24.dp, bottom = 120.dp)
     ) {
         item {
             Text(
@@ -206,84 +206,127 @@ fun WorkoutIdleView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
+                    .clickable { viewModel.startWorkout(type) }
                     .testTag("workout_card_$type"),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.25f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, accentColor.copy(alpha = 0.35f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(50.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(accentColor.copy(alpha = 0.16f)),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = type,
-                                tint = accentColor,
-                                modifier = Modifier.size(26.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(accentColor.copy(alpha = 0.18f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = type,
+                                    tint = accentColor,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = when (type) {
+                                        "RUNNING" -> if (isKm) "រត់ (Running)" else "Running"
+                                        "WALKING" -> if (isKm) "ដើរ (Walking)" else "Walking"
+                                        "JUMPING" -> if (isKm) "លោតអន្ទាក់ (Jump Rope)" else "Jump Rope"
+                                        else -> if (isKm) "លើកទម្ងន់ (Weightlifting)" else "Weightlifting"
+                                    },
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = (-0.3).sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = when (type) {
+                                        "RUNNING" -> if (isKm) "GPS pace, distance & calories" else "GPS pace, distance & calories"
+                                        "WALKING" -> if (isKm) "Pace, distance & calories" else "Pace, distance & calories"
+                                        "JUMPING" -> if (isKm) "Motion sensor jump counter" else "Motion sensor jump counter"
+                                        else -> if (isKm) "Exercise sets, volume & rest timer" else "Exercise sets, volume & rest timer"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                )
+                            }
                         }
 
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = viewModel.str(stringKey),
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = (-0.3).sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                        Spacer(modifier = Modifier.width(10.dp))
+
+                        Button(
+                            onClick = { viewModel.startWorkout(type) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = accentColor,
+                                contentColor = CharcoalBackground
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.testTag("start_workout_button_$type")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = when (type) {
-                                    "RUNNING" -> if (isKm) "ល្បឿន GPS ចម្ងាយ និងកាឡូរី" else "GPS pace, distance & calories"
-                                    "WALKING" -> if (isKm) "ល្បឿន ចម្ងាយ និងកាឡូរី" else "Pace, distance & calories"
-                                    "JUMPING" -> if (isKm) "ឧបករណ៍ Sensor រាប់ចំនួនលោត" else "Sensor jump counter & cadence"
-                                    else -> if (isKm) "កំណត់ចំនួន Set និងម៉ោងសម្រាក" else "Exercise sets, volume & rest timer"
-                                },
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
+                                text = viewModel.str(StringKey.SESSION_START),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                softWrap = false
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    Button(
-                        onClick = { viewModel.startWorkout(type) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = accentColor,
-                            contentColor = CharcoalBackground
-                        ),
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
-                        modifier = Modifier.testTag("start_workout_button_$type")
+                    // Luxury Sport Feature Pills
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(
-                            text = viewModel.str(StringKey.SESSION_START),
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
-                            maxLines = 1,
-                            softWrap = false
-                        )
+                        val tags = when (type) {
+                            "RUNNING" -> listOf("GPS Track", "Pace Engine", "Cardio METs")
+                            "WALKING" -> listOf("Step Cadence", "Distance", "Low Impact")
+                            "JUMPING" -> listOf("Hardware Sensor", "100% Calorie Calibrated", "Jump Cadence")
+                            else -> listOf("Tonnage Volume", "Reps & Sets", "Auto Rest Timer")
+                        }
+                        tags.forEach { tag ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = tag,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             }
