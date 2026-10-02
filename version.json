@@ -1,9 +1,9 @@
 {
-  "versionCode": 2,
-  "versionName": "1.0.1",
+  "versionCode": 3,
+  "versionName": "1.0.2",
   "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk",
-  "releaseNotesEn": "New update: 3-2-1 workout countdown, smooth in-app Google Sign-In, and UI enhancements.",
-  "releaseNotesKm": "កំណែថ្មី៖ មុខងាររាប់ថយក្រោយ ៣ ២ ១ មុនហាត់ប្រាណ ផ្ទាំង Google Sign-In រលូន និងកែលម្អ UI។",
+  "releaseNotesEn": "New update v1.0.2: Smooth UI overhaul, zero-typing biometrics steppers, 0-59 scrollable minutes, custom workout titles, and living animations.",
+  "releaseNotesKm": "កំណែថ្មី v1.0.2៖ កែសម្រួល UI ស្អាត គ្មានការវាយអក្សរ Biometrics (ប្រើ Steppers), នាទីរំកិលបានពី ០ ដល់ ៥៩, ដាក់ Title និង Save ការហាត់, និងចលនា Animation រលូន។",
   "fileSizeBytes": 29180000,
   "mandatory": false
 }

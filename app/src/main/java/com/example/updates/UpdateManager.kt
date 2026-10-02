@@ -71,44 +71,66 @@ object UpdateManager {
 
         if (customUpdateUrl.isNotBlank() && customUpdateUrl.startsWith("http")) {
             try {
-                val checkUrl = if (customUpdateUrl.contains("?")) "$customUpdateUrl&_t=${System.currentTimeMillis()}" else "$customUpdateUrl?_t=${System.currentTimeMillis()}"
-                val url = URL(checkUrl)
-                val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 8000
-                conn.readTimeout = 8000
-                conn.useCaches = false
-                if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                    val jsonStr = reader.readText()
-                    reader.close()
-                    val json = JSONObject(jsonStr)
+                var checkUrl = if (customUpdateUrl.contains("?")) "$customUpdateUrl&_t=${System.currentTimeMillis()}" else "$customUpdateUrl?_t=${System.currentTimeMillis()}"
+                var conn: HttpURLConnection
+                var redirectCount = 0
 
-                    val remoteVersionCode = json.optInt("versionCode", 1)
-                    val remoteVersionName = json.optString("versionName", "1.0.0")
-                    val notesEn = json.optString("releaseNotesEn", "New update available.")
-                    val notesKm = json.optString("releaseNotesKm", "មានកំណែថ្មី។")
-                    val apkUrl = json.optString("apkUrl", "")
-                    val size = json.optLong("fileSizeBytes", 18_450_000L)
+                while (true) {
+                    val url = URL(checkUrl)
+                    conn = url.openConnection() as HttpURLConnection
+                    conn.connectTimeout = 10000
+                    conn.readTimeout = 10000
+                    conn.useCaches = false
+                    conn.instanceFollowRedirects = true
 
-                    val currentInstalledCode = try {
-                        com.example.BuildConfig.VERSION_CODE
-                    } catch (_: Throwable) {
-                        CURRENT_VERSION_CODE
+                    val code = conn.responseCode
+                    if (code == HttpURLConnection.HTTP_MOVED_TEMP || code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_SEE_OTHER || code == 307 || code == 308) {
+                        val redirectUrl = conn.getHeaderField("Location")
+                        conn.disconnect()
+                        if (redirectUrl != null && redirectCount < 4) {
+                            checkUrl = redirectUrl
+                            redirectCount++
+                            continue
+                        }
                     }
 
-                    if (remoteVersionCode > currentInstalledCode) {
-                        _updateStatus.value = UpdateStatus.Available(
-                            version = remoteVersionName,
-                            versionCode = remoteVersionCode,
-                            notesEn = notesEn,
-                            notesKm = notesKm,
-                            apkUrl = apkUrl,
-                            downloadSizeBytes = size
-                        )
+                    if (code == HttpURLConnection.HTTP_OK) {
+                        val reader = BufferedReader(InputStreamReader(conn.inputStream))
+                        val jsonStr = reader.readText()
+                        reader.close()
+                        conn.disconnect()
+                        val json = JSONObject(jsonStr)
+
+                        val remoteVersionCode = json.optInt("versionCode", 1)
+                        val remoteVersionName = json.optString("versionName", "1.0.0")
+                        val notesEn = json.optString("releaseNotesEn", "New update available.")
+                        val notesKm = json.optString("releaseNotesKm", "មានកំណែថ្មី។")
+                        val apkUrl = json.optString("apkUrl", "")
+                        val size = json.optLong("fileSizeBytes", 18_450_000L)
+
+                        val currentInstalledCode = try {
+                            com.example.BuildConfig.VERSION_CODE
+                        } catch (_: Throwable) {
+                            CURRENT_VERSION_CODE
+                        }
+
+                        if (remoteVersionCode > currentInstalledCode) {
+                            _updateStatus.value = UpdateStatus.Available(
+                                version = remoteVersionName,
+                                versionCode = remoteVersionCode,
+                                notesEn = notesEn,
+                                notesKm = notesKm,
+                                apkUrl = apkUrl,
+                                downloadSizeBytes = size
+                            )
+                        } else {
+                            _updateStatus.value = UpdateStatus.UpToDate
+                        }
+                        return@withContext
                     } else {
-                        _updateStatus.value = UpdateStatus.UpToDate
+                        conn.disconnect()
+                        break
                     }
-                    return@withContext
                 }
             } catch (e: Exception) {
                 // Fallback to up-to-date or error
