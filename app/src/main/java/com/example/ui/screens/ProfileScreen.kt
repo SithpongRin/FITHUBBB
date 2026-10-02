@@ -457,12 +457,16 @@ fun ProfileScreen(
             containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             dragHandle = {
-                BottomSheetDefaults.DragHandle(color = LimeAccent.copy(alpha = 0.6f))
+                BottomSheetDefaults.DragHandle(
+                    color = LimeAccent.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(top = 16.dp)
+                )
             }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .statusBarsPadding()
                     .padding(horizontal = 24.dp)
                     .padding(bottom = 36.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)

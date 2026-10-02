@@ -1,9 +1,9 @@
 {
-  "versionCode": 9,
-  "versionName": "1.0.8",
+  "versionCode": 10,
+  "versionName": "1.0.9",
   "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk",
-  "releaseNotesEn": "Update v1.0.8: Full Firebase Cloud Firestore synchronization with official google-services.json, luxury UI layout polish, and automatic seamless background updates.",
-  "releaseNotesKm": "កំណែថ្មី v1.0.8៖ ភ្ជាប់ប្រព័ន្ធ Firebase Cloud Firestore ផ្លូវការជាមួយ google-services.json, កែលម្អ UI ឱ្យកាន់តែប្រណិត, និងគាំទ្រការអាប់ដេតតាម App ផ្ទាល់។",
-  "fileSizeBytes": 29830616,
+  "releaseNotesEn": "Update v1.0.9: Fixed bottom sheet status bar clipping, improved 24/7 sensor layout, polished workout cards, fixed progress calorie comparison math, and enabled in-app updates.",
+  "releaseNotesKm": "កំណែថ្មី v1.0.9៖ កែកម្ពស់ Bottom Sheet មិនឲ្យជាន់លើ Status Bar, កែអក្សរ 24/7 Sensor មិនឲ្យដាច់, កែ UI Workout Card ឲ្យស្អាត, កែការគណនាកាឡូរី Progress ធៀបម្សិលមិញ, និងគាំទ្រការ Update ក្នុង App ផ្ទាល់។",
+  "fileSizeBytes": 28942536,
   "mandatory": false
 }

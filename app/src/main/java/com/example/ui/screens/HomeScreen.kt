@@ -279,11 +279,11 @@ fun HomeScreen(
                             }
                             Text(
                                 text = when (updateStatus) {
-                                    is UpdateStatus.Checking -> if (isKm) "ពិនិត្យ..." else "Check"
-                                    is UpdateStatus.Available -> if (isKm) "មាន Update" else "Update"
+                                    is UpdateStatus.Checking -> if (isKm) "ពិនិត្យ..." else "Check..."
+                                    is UpdateStatus.Available -> "Update v${(updateStatus as UpdateStatus.Available).version}"
                                     is UpdateStatus.Downloading -> "${(updateStatus as UpdateStatus.Downloading).progressPercent}%"
                                     is UpdateStatus.ReadyToInstall -> if (isKm) "ដំឡើង" else "Install"
-                                    else -> "v1.0.7"
+                                    else -> "v${com.example.BuildConfig.VERSION_NAME}"
                                 },
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,

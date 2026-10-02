@@ -255,24 +255,30 @@ fun WorkoutIdleView(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = (-0.3).sp,
                                         color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                    ),
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = when (type) {
-                                        "RUNNING" -> if (isKm) "GPS pace, distance & calories" else "GPS pace, distance & calories"
-                                        "WALKING" -> if (isKm) "Pace, distance & calories" else "Pace, distance & calories"
-                                        "JUMPING" -> if (isKm) "Motion sensor jump counter" else "Motion sensor jump counter"
-                                        else -> if (isKm) "Exercise sets, volume & rest timer" else "Exercise sets, volume & rest timer"
+                                        "RUNNING" -> if (isKm) "វាស់ GPS, ល្បឿន និងកាឡូរី" else "GPS pace & distance"
+                                        "WALKING" -> if (isKm) "ជំហាន Cadence និងចម្ងាយ" else "Step cadence & distance"
+                                        "JUMPING" -> if (isKm) "រាប់ការលោតដោយ Sensor" else "Motion sensor counter"
+                                        else -> if (isKm) "កំណត់ Sets, Reps & Rest" else "Sets, reps & rest timer"
                                     },
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 11.5.sp
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    softWrap = false
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
 
                         Button(
                             onClick = { viewModel.startWorkout(type) },
@@ -280,14 +286,14 @@ fun WorkoutIdleView(
                                 containerColor = accentColor,
                                 contentColor = CharcoalBackground
                             ),
-                            shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp),
                             modifier = Modifier.testTag("start_workout_button_$type")
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
@@ -1019,12 +1025,16 @@ fun ActiveSessionView(
             containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             dragHandle = {
-                BottomSheetDefaults.DragHandle(color = LimeAccent.copy(alpha = 0.6f))
+                BottomSheetDefaults.DragHandle(
+                    color = LimeAccent.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(top = 16.dp)
+                )
             }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .statusBarsPadding()
                     .padding(horizontal = 24.dp)
                     .padding(bottom = 36.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)

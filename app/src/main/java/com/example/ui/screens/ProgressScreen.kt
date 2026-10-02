@@ -200,11 +200,14 @@ fun ProgressScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(24.dp))
+                        .clickable(enabled = todayWorkouts.isNotEmpty()) {
+                            selectedWorkoutForDetail = todayWorkouts.first()
+                        }
                         .testTag("card_progress_comparison"),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     border = BorderStroke(
-                        1.5.dp,
-                        if (todayCalories >= yesterdayCalories && todayCalories > 0) LimeAccent.copy(alpha = 0.6f)
+                        1.dp,
+                        if (todayCalories >= 1.0 || todayJumps > 0) LimeAccent.copy(alpha = 0.3f)
                         else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
                 ) {
@@ -248,35 +251,46 @@ fun ProgressScreen(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(
-                                        if (todayCalories > yesterdayCalories) LimeAccent.copy(alpha = 0.2f)
-                                        else if (yesterdayCalories > 0 && todayCalories == 0.0) WarningAmber.copy(alpha = 0.2f)
-                                        else MaterialTheme.colorScheme.surface
+                                        when {
+                                            todayCalories >= 1.0 && todayCalories > yesterdayCalories -> LimeAccent.copy(alpha = 0.2f)
+                                            todayJumps > 0 && todayCalories < 1.0 -> Color(0xFFFFAB00).copy(alpha = 0.2f)
+                                            yesterdayCalories >= 1.0 && todayCalories < 1.0 -> WarningAmber.copy(alpha = 0.2f)
+                                            else -> MaterialTheme.colorScheme.surface
+                                        }
                                     )
                                     .border(
                                         1.dp,
-                                        if (todayCalories > yesterdayCalories) LimeAccent
-                                        else if (yesterdayCalories > 0 && todayCalories == 0.0) WarningAmber
-                                        else Color.Transparent,
+                                        when {
+                                            todayCalories >= 1.0 && todayCalories > yesterdayCalories -> LimeAccent
+                                            todayJumps > 0 && todayCalories < 1.0 -> Color(0xFFFFAB00)
+                                            yesterdayCalories >= 1.0 && todayCalories < 1.0 -> WarningAmber
+                                            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                        },
                                         RoundedCornerShape(10.dp)
                                     )
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
                                 Text(
                                     text = when {
-                                        todayCalories > yesterdayCalories ->
+                                        todayCalories >= 1.0 && todayCalories > yesterdayCalories ->
                                             "+$caloriePercentChange%"
-                                        yesterdayCalories > 0.0 && todayCalories == 0.0 ->
+                                        todayJumps > 0 && todayCalories < 1.0 ->
+                                            "$todayJumps ${if (isKm) "លោត" else "jumps"}"
+                                        yesterdayCalories >= 1.0 && todayCalories < 1.0 ->
                                             "${yesterdayCalories.toInt()} kcal"
-                                        todayCalories > 0.0 && todayCalories <= yesterdayCalories ->
+                                        todayCalories >= 1.0 && todayCalories <= yesterdayCalories ->
                                             "-${(-calorieDiff).toInt()} kcal"
                                         else ->
                                             if (isKm) "ត្រៀមខ្លួន" else "Ready"
                                     },
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Black,
-                                        color = if (todayCalories > yesterdayCalories) LimeAccent
-                                        else if (yesterdayCalories > 0 && todayCalories == 0.0) WarningAmber
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = when {
+                                            todayCalories >= 1.0 && todayCalories > yesterdayCalories -> LimeAccent
+                                            todayJumps > 0 && todayCalories < 1.0 -> Color(0xFFFFAB00)
+                                            yesterdayCalories >= 1.0 && todayCalories < 1.0 -> WarningAmber
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
                                     ),
                                     maxLines = 1,
                                     softWrap = false
@@ -286,13 +300,16 @@ fun ProgressScreen(
 
                         Text(
                             text = when {
-                                todayCalories > yesterdayCalories ->
+                                todayCalories >= 1.0 && todayCalories > yesterdayCalories ->
                                     if (isKm) "អ្នកបានដុតកាឡូរីលើសពីម្សិលមិញ +${calorieDiff.toInt()} kcal! ការខិតខំប្រឹងប្រែងដ៏អស្ចារ្យ!"
                                     else "You burned +${calorieDiff.toInt()} kcal more than yesterday! Outstanding momentum!"
-                                yesterdayCalories > 0.0 && todayCalories == 0.0 ->
+                                todayJumps > 0 && todayCalories < 1.0 ->
+                                    if (isKm) "អ្នកបានលោតបាន $todayJumps ដងនៅថ្ងៃនេះ! បន្តការហាត់ប្រាណដើម្បីបង្កើនកាឡូរីបន្ថែម!"
+                                    else "You completed $todayJumps jumps today! Keep moving to build daily momentum!"
+                                yesterdayCalories >= 1.0 && todayCalories < 1.0 ->
                                     if (isKm) "ម្សិលមិញអ្នកដុតបាន ${yesterdayCalories.toInt()} kcal (${yesterdaySeconds / 60} នាទី)។ ចាប់ផ្តើមហាត់ប្រាណដើម្បីបន្តកំណត់ត្រា!"
                                     else "Yesterday you burned ${yesterdayCalories.toInt()} kcal (${yesterdaySeconds / 60} mins). Start working out to keep the pace!"
-                                todayCalories > 0.0 && todayCalories <= yesterdayCalories ->
+                                todayCalories >= 1.0 && todayCalories <= yesterdayCalories ->
                                     if (isKm) "អ្នកកំពុងធ្វើដំណើរទៅមុខយ៉ាងល្អ! បន្ថែមលំហាត់ប្រាណបន្តិចទៀតដើម្បីបំបែកកំណត់ត្រាម្សិលមិញ!"
                                     else "You are doing great! Complete a quick session to beat yesterday's record!"
                                 else ->

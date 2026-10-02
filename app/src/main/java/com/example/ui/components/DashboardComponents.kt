@@ -333,9 +333,9 @@ fun WalkingActivityHeroCard(
                         .weight(1f)
                         .clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f))
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Sensors,
@@ -345,7 +345,7 @@ fun WalkingActivityHeroCard(
                     )
                     Column {
                         Text(
-                            text = if (isTrackingEnabled) "24/7 AUTO" else "OFF",
+                            text = if (isTrackingEnabled) "24/7" else "OFF",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = if (isTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant
@@ -354,11 +354,13 @@ fun WalkingActivityHeroCard(
                             softWrap = false
                         )
                         Text(
-                            text = if (isKm) "Motion" else "Sensor",
+                            text = if (isTrackingEnabled) (if (isKm) "ស្វ័យប្រវត្តិ" else "Auto") else (if (isKm) "បិទ" else "Sensor"),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 9.5.sp
-                            )
+                            ),
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
