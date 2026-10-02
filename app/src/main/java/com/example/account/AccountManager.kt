@@ -111,6 +111,16 @@ class AccountManager(private val context: Context) {
         _isAuthenticated.value = true
     }
 
+    fun recordDeletedWorkout(id: String) {
+        val currentSet = prefs.getStringSet("deleted_workout_ids", emptySet())?.toMutableSet() ?: mutableSetOf()
+        currentSet.add(id)
+        prefs.edit().putStringSet("deleted_workout_ids", currentSet).apply()
+    }
+
+    fun getDeletedWorkoutIds(): Set<String> {
+        return prefs.getStringSet("deleted_workout_ids", emptySet()) ?: emptySet()
+    }
+
     fun updateProfilePhoto(photoUrl: String) {
         val current = _currentAccount.value
         val updated = current.copy(photoUrl = photoUrl)
@@ -184,10 +194,11 @@ class AccountManager(private val context: Context) {
                     repository?.updateProfile(prof.copy(fullName = name))
                 }
 
-                // Restore all remote workouts into Room DB
+                // Restore all remote workouts into Room DB (skip deleted ones)
+                val deletedWorkoutIds = getDeletedWorkoutIds() + (repository?.getDeletedWorkoutIds() ?: emptyList())
                 val currentLocalWorkouts = repository?.allWorkoutsFlow?.firstOrNull() ?: emptyList()
                 for (workout in cloudData.workouts) {
-                    if (currentLocalWorkouts.none { it.id == workout.id }) {
+                    if (!deletedWorkoutIds.contains(workout.id) && currentLocalWorkouts.none { it.id == workout.id }) {
                         repository?.saveWorkout(workout)
                     }
                 }
@@ -456,9 +467,13 @@ class AccountManager(private val context: Context) {
             val remoteData = CloudSyncService.fetchUserData(account.email)
 
             // 2. Bidirectional Merge: Workouts
-            val mergedWorkoutsMap = localWorkouts.associateBy { it.id }.toMutableMap()
+            val localDeletedWorkoutIds = (getDeletedWorkoutIds() + repository.getDeletedWorkoutIds()).toSet()
+            val mergedWorkoutsMap = localWorkouts.filterNot { localDeletedWorkoutIds.contains(it.id) }.associateBy { it.id }.toMutableMap()
             if (remoteData != null) {
                 for (rw in remoteData.workouts) {
+                    if (localDeletedWorkoutIds.contains(rw.id)) {
+                        continue // Skip deleted workout to prevent resurrection
+                    }
                     if (!mergedWorkoutsMap.containsKey(rw.id)) {
                         repository.saveWorkout(rw)
                         mergedWorkoutsMap[rw.id] = rw
@@ -543,6 +558,13 @@ class AccountManager(private val context: Context) {
                             "notes" to w.notes
                         )
                         userDocRef.collection("workouts").document(w.id).set(wMap, SetOptions.merge())
+                    }
+
+                    // Delete removed workouts from Firestore
+                    for (delId in localDeletedWorkoutIds) {
+                        try {
+                            userDocRef.collection("workouts").document(delId).delete()
+                        } catch (_: Exception) {}
                     }
 
                     // Sync Nutrition

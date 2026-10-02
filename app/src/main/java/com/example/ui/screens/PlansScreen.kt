@@ -44,9 +44,11 @@ fun PlansScreen(
     val allSchedules by viewModel.allSchedules.collectAsState()
     val appLanguage by viewModel.appLanguage.collectAsState()
     val isKm = appLanguage == AppLanguage.KHMER
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     var showGenerateDialog by remember { mutableStateOf(false) }
     var showAddScheduleDialog by remember { mutableStateOf(false) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
     var selectedPlanForDetails by remember { mutableStateOf<WorkoutPlanEntity?>(null) }
 
     LazyColumn(
@@ -112,15 +114,109 @@ fun PlansScreen(
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
 
-                IconButton(
-                    onClick = { showAddScheduleDialog = true },
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(LimeAccent.copy(alpha = 0.18f))
-                        .testTag("button_add_schedule")
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Schedule", tint = LimeAccent, modifier = Modifier.size(20.dp))
+                    OutlinedButton(
+                        onClick = {
+                            if (!com.example.notifications.NotificationHelper.areNotificationsEnabled(context)) {
+                                showPermissionDialog = true
+                            } else {
+                                com.example.notifications.NotificationHelper.sendNotificationNow(
+                                    context,
+                                    if (isKm) "ការជូនដំណឹងដំណើរការល្អ!" else "Notification Working!",
+                                    if (isKm) "សាកល្បង Notification ជោគជ័យ! ប្រព័ន្ធរំលឹករបស់ FITHUB ដំណើរការប្រក្រតី។" else "Test notification successful! Reminders are active."
+                                )
+                            }
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(15.dp), tint = LimeAccent)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(if (isKm) "សាកល្បង" else "Test", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    IconButton(
+                        onClick = {
+                            if (!com.example.notifications.NotificationHelper.areNotificationsEnabled(context)) {
+                                showPermissionDialog = true
+                            } else {
+                                showAddScheduleDialog = true
+                            }
+                        },
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(LimeAccent.copy(alpha = 0.18f))
+                            .testTag("button_add_schedule")
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Schedule", tint = LimeAccent, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+        }
+
+        // Notification Disabled Warning Banner
+        if (!com.example.notifications.NotificationHelper.areNotificationsEnabled(context)) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.NotificationsOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isKm) "ការជូនដំណឹងត្រូវបានបិទ" else "Notifications are Disabled",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            )
+                            Text(
+                                text = if (isKm) "សូមបើក Notification ក្នុង Settings ដើម្បីទទួលការរំលឹក" else "Enable notifications in settings to receive reminders",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                val intent = android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                }
+                                try {
+                                    context.startActivity(intent)
+                                } catch (_: Throwable) {
+                                    val fallback = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = android.net.Uri.fromParts("package", context.packageName, null)
+                                    }
+                                    context.startActivity(fallback)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(if (isKm) "បើកឥឡូវ" else "Enable", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
         }
@@ -163,7 +259,11 @@ fun PlansScreen(
             items(allSchedules) { schedule ->
                 val dayNamesKm = listOf("អាទិត្យ", "ច័ន្ទ", "អង្គារ", "ពុធ", "ព្រហស្បតិ៍", "សុក្រ", "សៅរ៍")
                 val dayNamesEn = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
-                val dayLabel = if (isKm) dayNamesKm.getOrElse(schedule.dayOfWeek) { "ថ្ងៃ" } else dayNamesEn.getOrElse(schedule.dayOfWeek) { "Day" }
+                val dayLabel = if (schedule.dayOfWeek == 7 || schedule.dayOfWeek == -1) {
+                    if (isKm) "រាល់ថ្ងៃ" else "Everyday"
+                } else {
+                    if (isKm) dayNamesKm.getOrElse(schedule.dayOfWeek) { "ថ្ងៃ" } else dayNamesEn.getOrElse(schedule.dayOfWeek) { "Day" }
+                }
 
                 val (icon, iconBg, typeTitle) = when (schedule.workoutType) {
                     "RUNNING" -> Triple(Icons.Default.DirectionsRun, Color(0xFF22C55E), if (isKm) "រត់" else "Running")
@@ -824,12 +924,32 @@ fun PlansScreen(
                     }
                 }
 
-                // 2. Day of Week Selection
+                // 2. Day of Week Selection (Everyday or Specific Day)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = if (isKm) "ជ្រើសរើសថ្ងៃក្នុងសប្តាហ៍" else "Select Day of Week",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isKm) "ជ្រើសរើសថ្ងៃរំលឹក" else "Select Day / Schedule",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+
+                        // Everyday Chip
+                        FilterChip(
+                            selected = dayIndex == 7,
+                            onClick = { dayIndex = 7 },
+                            leadingIcon = {
+                                Icon(Icons.Default.Repeat, contentDescription = null, modifier = Modifier.size(15.dp))
+                            },
+                            label = { Text(if (isKm) "រាល់ថ្ងៃ (Everyday)" else "Everyday", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = LimeAccent,
+                                selectedLabelColor = CharcoalBackground
+                            )
+                        )
+                    }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1237,5 +1357,51 @@ fun PlansScreen(
                 }
             }
         }
+    }
+
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = {
+                Text(
+                    text = if (isKm) "អនុញ្ញាតការជូនដំណឹង (Notification)" else "Enable Notifications",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = if (isKm)
+                        "ដើម្បីឱ្យកម្មវិធី FITHUB អាចរំលឹកម៉ោងហាត់ប្រាណរបស់អ្នកបាន សូមបើកការអនុញ្ញាត Notification នៅក្នុងការកំណត់ទូរស័ព្ទ (App Settings)។"
+                    else
+                        "To receive workout reminders on time, please allow notifications for FITHUB in your device settings."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPermissionDialog = false
+                        val intent = android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: Throwable) {
+                            val fallback = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = android.net.Uri.fromParts("package", context.packageName, null)
+                            }
+                            context.startActivity(fallback)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = LimeAccent, contentColor = CharcoalBackground)
+                ) {
+                    Text(if (isKm) "ទៅកាន់ Settings" else "Open Settings", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionDialog = false }) {
+                    Text(if (isKm) "បោះបង់" else "Cancel")
+                }
+            }
+        )
     }
 }

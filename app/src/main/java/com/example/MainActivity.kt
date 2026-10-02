@@ -83,6 +83,11 @@ class MainActivity : ComponentActivity() {
                 // Auto-check for OTA features and APK updates on launch
                 viewModel.checkForFeatureUpdates(forceSimulate = false)
                 viewModel.checkForUpdates(forceSimulate = false)
+
+                // Ensure all active schedules are registered with AlarmManager
+                viewModel.allSchedules.value.filter { it.enabled }.forEach { sch ->
+                    com.example.notifications.NotificationHelper.scheduleReminder(this@MainActivity, sch, notifyConfirmation = false)
+                }
             }
 
             FithubTheme(darkTheme = isDark) {

@@ -34,6 +34,12 @@ interface WorkoutDao {
 
     @Query("UPDATE workouts SET deletedAt = :deletedAt WHERE id = :id")
     suspend fun softDeleteWorkout(id: String, deletedAt: Long = System.currentTimeMillis())
+
+    @Query("SELECT id FROM workouts WHERE deletedAt IS NOT NULL")
+    suspend fun getDeletedWorkoutIds(): List<String>
+
+    @Query("DELETE FROM workouts WHERE id = :id")
+    suspend fun hardDeleteWorkout(id: String)
 }
 
 @Dao

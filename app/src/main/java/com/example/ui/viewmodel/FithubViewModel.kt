@@ -624,6 +624,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
 
     fun deleteWorkout(workoutId: String) {
         viewModelScope.launch {
+            accountManager.recordDeletedWorkout(workoutId)
             repository.deleteWorkout(workoutId)
             triggerCloudSync()
         }

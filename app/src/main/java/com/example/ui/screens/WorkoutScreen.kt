@@ -354,10 +354,53 @@ fun ActiveSessionView(
     unitSystem: FormatUtils.UnitSystem,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val isKm = viewModel.appLanguage.collectAsState().value.code == "km"
     var showCalibrateDialog by remember { mutableStateOf(false) }
     var showFinishWorkoutDialog by remember { mutableStateOf(false) }
     var workoutTitleInput by remember { mutableStateOf("") }
+    var milestoneAlertCount by remember { mutableStateOf<Int?>(null) }
+    var lastAlertedCount by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(activeWorkout.jumpCount, activeWorkout.type) {
+        if (activeWorkout.type == "JUMPING") {
+            val count = activeWorkout.jumpCount
+            val isMilestone = (count == 10 || count == 50 || (count > 0 && count % 100 == 0))
+            if (isMilestone && count > lastAlertedCount) {
+                lastAlertedCount = count
+                milestoneAlertCount = count
+
+                // Sound tone alert
+                try {
+                    val toneGen = android.media.ToneGenerator(android.media.AudioManager.STREAM_NOTIFICATION, 100)
+                    toneGen.startTone(android.media.ToneGenerator.TONE_PROP_BEEP2, 400)
+                } catch (_: Throwable) {}
+
+                // Haptic vibration alert
+                try {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        val vm = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                        vm?.defaultVibrator?.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 150, 100, 250), -1))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        val v = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                            v?.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 150, 100, 250), -1))
+                        } else {
+                            @Suppress("DEPRECATION")
+                            v?.vibrate(longArrayOf(0, 150, 100, 250), -1)
+                        }
+                    }
+                } catch (_: Throwable) {}
+
+                // Auto-dismiss banner after 4.5 seconds
+                kotlinx.coroutines.delay(4500)
+                if (milestoneAlertCount == count) {
+                    milestoneAlertCount = null
+                }
+            }
+        }
+    }
 
     LazyColumn(
         modifier = modifier
@@ -514,6 +557,72 @@ fun ActiveSessionView(
             }
 
             "JUMPING" -> {
+                if (milestoneAlertCount != null) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(20.dp)),
+                            colors = CardDefaults.cardColors(
+                                containerColor = LimeAccent.copy(alpha = 0.15f)
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.5.dp, LimeAccent)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(CircleShape)
+                                        .background(LimeAccent),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Bolt,
+                                        contentDescription = null,
+                                        tint = CharcoalBackground,
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (isKm) "អបអរសាទរ! ដល់គោលដៅលោតហើយ" else "Milestone Reached!",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Black,
+                                            color = LimeAccent
+                                        )
+                                    )
+                                    Text(
+                                        text = if (isKm) "អ្នកសម្រេចបាន $milestoneAlertCount ដងនៃការលោតខ្សែ!" else "You achieved $milestoneAlertCount jumps!",
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = { milestoneAlertCount = null },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Close",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 item {
                     Card(
                         modifier = Modifier

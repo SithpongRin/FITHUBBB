@@ -49,6 +49,9 @@ class FithubRepository(private val db: FithubDatabase) {
         db.workoutDao().softDeleteWorkout(id)
     }
 
+    suspend fun getDeletedWorkoutIds(): List<String> =
+        db.workoutDao().getDeletedWorkoutIds()
+
     suspend fun saveActiveSession(session: ActiveSessionEntity) {
         db.activeSessionDao().saveActiveSession(session)
     }
