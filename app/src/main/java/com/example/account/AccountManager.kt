@@ -141,7 +141,13 @@ class AccountManager(private val context: Context) {
         }
     }
 
-    suspend fun signInWithEmail(email: String, password: String): AuthResult = withContext(Dispatchers.IO) {
+    val networkMonitor = com.example.network.NetworkMonitor(context)
+
+    suspend fun signInWithEmail(
+        email: String,
+        password: String,
+        repository: FithubRepository? = null
+    ): AuthResult = withContext(Dispatchers.IO) {
         val cleanEmail = email.trim().lowercase()
         if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {
             return@withContext AuthResult(false, "សូមបញ្ចូលអ៊ីមែលឱ្យបានត្រឹមត្រូវ")
@@ -150,29 +156,100 @@ class AccountManager(private val context: Context) {
             return@withContext AuthResult(false, "ពាក្យសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួអក្សរ")
         }
 
+        val inputPassHash = hashPassword(password)
+        val isOnline = networkMonitor.isCurrentlyOnline()
+
+        // 1. Check External Server Cloud Database first for genuine multi-device persistence
+        if (isOnline) {
+            val cloudData = CloudSyncService.fetchUserData(cleanEmail)
+            if (cloudData != null) {
+                // Verify password against server
+                if (cloudData.passwordHash.isNotBlank() && cloudData.passwordHash != inputPassHash) {
+                    return@withContext AuthResult(false, "ពាក្យសម្ងាត់ ឬអ៊ីមែលមិនត្រឹមត្រូវទេ សូមពិនិត្យមើលឡើងវិញ")
+                }
+
+                // Password matched! Restore all data to local device
+                val name = cloudData.displayName.ifBlank {
+                    cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() }
+                }
+
+                prefs.edit()
+                    .putString("user_pass_$cleanEmail", inputPassHash)
+                    .putString("user_name_$cleanEmail", name)
+                    .putString("photo_url", cloudData.photoUrl)
+                    .apply()
+
+                // Restore profile
+                cloudData.profile?.let { prof ->
+                    repository?.updateProfile(prof.copy(fullName = name))
+                }
+
+                // Restore all remote workouts into Room DB
+                val currentLocalWorkouts = repository?.allWorkoutsFlow?.firstOrNull() ?: emptyList()
+                for (workout in cloudData.workouts) {
+                    if (currentLocalWorkouts.none { it.id == workout.id }) {
+                        repository?.saveWorkout(workout)
+                    }
+                }
+
+                // Restore all remote sleep records into Room DB
+                val currentLocalSleep = repository?.allSleepFlow?.firstOrNull() ?: emptyList()
+                for (sleep in cloudData.sleepLogs) {
+                    if (currentLocalSleep.none { it.id == sleep.id }) {
+                        repository?.logSleep(sleep)
+                    }
+                }
+
+                // Restore all remote nutrition logs into Room DB
+                val currentLocalNut = repository?.allNutritionFlow?.firstOrNull() ?: emptyList()
+                for (nut in cloudData.nutritionLogs) {
+                    if (currentLocalNut.none { it.id == nut.id }) {
+                        repository?.addNutritionEntry(nut)
+                    }
+                }
+
+                // Restore daily steps
+                for (ds in cloudData.dailySteps) {
+                    repository?.saveDailySteps(ds)
+                }
+
+                val account = UserAccount(
+                    userId = cloudData.userId,
+                    email = cleanEmail,
+                    displayName = name,
+                    isOnline = true,
+                    isCloudSynced = true,
+                    lastSyncedAt = System.currentTimeMillis(),
+                    photoUrl = cloudData.photoUrl
+                )
+                saveAccount(account)
+                _syncStatus.value = SyncStatus.Synced(System.currentTimeMillis())
+                return@withContext AuthResult(true, null, account)
+            }
+        }
+
+        // 2. Verify against local credentials (Offline fallback)
         val storedHash = prefs.getString("user_pass_$cleanEmail", null)
         val storedName = prefs.getString("user_name_$cleanEmail", null)
-
-        // 1. Verify against local credentials if registered locally
         if (storedHash != null) {
-            if (storedHash == hashPassword(password)) {
+            if (storedHash == inputPassHash) {
                 val account = UserAccount(
                     userId = "usr_${cleanEmail.hashCode().toString().replace("-", "")}",
                     email = cleanEmail,
                     displayName = storedName ?: cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() },
-                    isOnline = networkMonitor.isCurrentlyOnline(),
+                    isOnline = isOnline,
                     isCloudSynced = false,
                     lastSyncedAt = System.currentTimeMillis()
                 )
                 saveAccount(account)
-                _syncStatus.value = if (networkMonitor.isCurrentlyOnline()) SyncStatus.Synced(System.currentTimeMillis()) else SyncStatus.OfflineMode(0)
+                _syncStatus.value = if (isOnline) SyncStatus.Synced(System.currentTimeMillis()) else SyncStatus.OfflineMode(0)
                 return@withContext AuthResult(true, null, account)
             } else {
                 return@withContext AuthResult(false, "ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ សូមពិនិត្យមើលឡើងវិញ")
             }
         }
 
-        // 2. Fallback to Firebase Auth if local credentials not found
+        // 3. Fallback to Firebase Auth if configured
         val currentAuth = auth
         if (currentAuth != null) {
             val deferred = CompletableDeferred<AuthResult>()
@@ -190,9 +267,8 @@ class AccountManager(private val context: Context) {
                             isCloudSynced = true,
                             lastSyncedAt = System.currentTimeMillis()
                         )
-                        // Save credentials locally as well for offline fallback
                         prefs.edit()
-                            .putString("user_pass_$cleanEmail", hashPassword(password))
+                            .putString("user_pass_$cleanEmail", inputPassHash)
                             .putString("user_name_$cleanEmail", name)
                             .apply()
                         saveAccount(account)
@@ -213,11 +289,16 @@ class AccountManager(private val context: Context) {
             return@withContext deferred.await()
         }
 
-        // 3. If no local record and no Firebase configured
+        // 4. Account not found anywhere
         AuthResult(false, "រកមិនឃើញគណនីអ៊ីមែលនេះទេ សូមចុច 'ចុះឈ្មោះ' ជាមុនសិន")
     }
 
-    suspend fun signUpWithEmail(name: String, email: String, password: String): AuthResult = withContext(Dispatchers.IO) {
+    suspend fun signUpWithEmail(
+        name: String,
+        email: String,
+        password: String,
+        repository: FithubRepository? = null
+    ): AuthResult = withContext(Dispatchers.IO) {
         val cleanEmail = email.trim().lowercase()
         val cleanName = name.trim().ifEmpty { cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() } }
 
@@ -231,7 +312,16 @@ class AccountManager(private val context: Context) {
             return@withContext AuthResult(false, "ពាក្យសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួអក្សរ")
         }
 
-        // Check if email already registered locally
+        val isOnline = networkMonitor.isCurrentlyOnline()
+
+        // 1. Check if user already exists on Server or locally
+        if (isOnline) {
+            val existingRemote = CloudSyncService.fetchUserData(cleanEmail)
+            if (existingRemote != null) {
+                return@withContext AuthResult(false, "អ៊ីមែលនេះមានគណនីរួចហើយ សូមជ្រើសរើស 'ចូលប្រើប្រាស់'")
+            }
+        }
+
         val existingPass = prefs.getString("user_pass_$cleanEmail", null)
         if (existingPass != null) {
             return@withContext AuthResult(false, "អ៊ីមែលនេះមានគណនីរួចហើយ សូមជ្រើសរើស 'ចូលប្រើប្រាស់'")
@@ -239,24 +329,46 @@ class AccountManager(private val context: Context) {
 
         val hashedPassword = hashPassword(password)
         val uid = "usr_${cleanEmail.hashCode().toString().replace("-", "")}"
+        val photoUrl = "https://api.dicebear.com/7.x/initials/png?seed=${cleanEmail}&backgroundColor=c6ff00&textColor=121212"
 
-        // Save local credentials permanently (100% Offline-First)
+        // Save local credentials permanently
         prefs.edit()
             .putString("user_pass_$cleanEmail", hashedPassword)
             .putString("user_name_$cleanEmail", cleanName)
+            .putString("photo_url", photoUrl)
             .apply()
 
         val localAccount = UserAccount(
             userId = uid,
             email = cleanEmail,
             displayName = cleanName,
-            isOnline = networkMonitor.isCurrentlyOnline(),
-            isCloudSynced = false,
-            lastSyncedAt = System.currentTimeMillis()
+            isOnline = isOnline,
+            isCloudSynced = isOnline,
+            lastSyncedAt = System.currentTimeMillis(),
+            photoUrl = photoUrl
         )
         saveAccount(localAccount)
 
-        // Try syncing with Firebase Auth in the background if configured
+        // Upload initial account payload to External Server
+        if (isOnline) {
+            val localProfile = repository?.getProfile()
+            val initialCloudData = CloudUserData(
+                userId = uid,
+                email = cleanEmail,
+                passwordHash = hashedPassword,
+                displayName = cleanName,
+                photoUrl = photoUrl,
+                updatedAt = System.currentTimeMillis(),
+                profile = localProfile?.copy(fullName = cleanName),
+                workouts = repository?.allWorkoutsFlow?.firstOrNull() ?: emptyList(),
+                sleepLogs = repository?.allSleepFlow?.firstOrNull() ?: emptyList(),
+                nutritionLogs = repository?.allNutritionFlow?.firstOrNull() ?: emptyList()
+            )
+            CloudSyncService.pushUserData(initialCloudData)
+            _syncStatus.value = SyncStatus.Synced(System.currentTimeMillis())
+        }
+
+        // Try background Firebase Auth if configured
         val currentAuth = auth
         if (currentAuth != null) {
             try {
@@ -311,13 +423,11 @@ class AccountManager(private val context: Context) {
         _syncStatus.value = SyncStatus.OfflineMode(0)
     }
 
-    val networkMonitor = com.example.network.NetworkMonitor(context)
-
     suspend fun performCloudSync(repository: FithubRepository) = withContext(Dispatchers.IO) {
         val account = _currentAccount.value
         val isNetworkAvailable = networkMonitor.isCurrentlyOnline()
 
-        if (!account.isOnline) {
+        if (!account.isOnline || account.email.isBlank()) {
             _syncStatus.value = SyncStatus.OfflineMode(
                 localItemsCount = 0,
                 hasInternet = isNetworkAvailable
@@ -333,234 +443,90 @@ class AccountManager(private val context: Context) {
             return@withContext
         }
 
-        val currentFirestore = firestore
-        if (currentFirestore == null) {
-            val now = System.currentTimeMillis()
-            _syncStatus.value = SyncStatus.Synced(now)
-            return@withContext
-        }
-
         _syncStatus.value = SyncStatus.Syncing
 
-        val userId = account.userId
-
         try {
-            // 1. Sync Profile
             val localProfile = repository.getProfile()
-            val profileMap = hashMapOf(
-                "fullName" to account.displayName,
-                "age" to localProfile.age,
-                "biologicalSex" to localProfile.biologicalSex,
-                "heightCm" to localProfile.heightCm,
-                "weightKg" to localProfile.weightKg,
-                "fitnessGoal" to localProfile.fitnessGoal,
-                "activityLevel" to localProfile.activityLevel,
-                "updatedAt" to System.currentTimeMillis()
+            val localWorkouts = repository.allWorkoutsFlow.firstOrNull() ?: emptyList()
+            val localSleep = repository.allSleepFlow.firstOrNull() ?: emptyList()
+            val localNutrition = repository.allNutritionFlow.firstOrNull() ?: emptyList()
+            val localTodaySteps = repository.dailyStepsDao.getStepsForDate(java.time.LocalDate.now().toString())
+
+            // 1. Fetch Remote Dataset from External Cloud Server
+            val remoteData = CloudSyncService.fetchUserData(account.email)
+
+            // 2. Bidirectional Merge: Workouts
+            val mergedWorkoutsMap = localWorkouts.associateBy { it.id }.toMutableMap()
+            if (remoteData != null) {
+                for (rw in remoteData.workouts) {
+                    if (!mergedWorkoutsMap.containsKey(rw.id)) {
+                        repository.saveWorkout(rw)
+                        mergedWorkoutsMap[rw.id] = rw
+                    }
+                }
+            }
+
+            // 3. Bidirectional Merge: Sleep
+            val mergedSleepMap = localSleep.associateBy { it.id }.toMutableMap()
+            if (remoteData != null) {
+                for (rs in remoteData.sleepLogs) {
+                    if (!mergedSleepMap.containsKey(rs.id)) {
+                        repository.logSleep(rs)
+                        mergedSleepMap[rs.id] = rs
+                    }
+                }
+            }
+
+            // 4. Bidirectional Merge: Nutrition
+            val mergedNutMap = localNutrition.associateBy { it.id }.toMutableMap()
+            if (remoteData != null) {
+                for (rn in remoteData.nutritionLogs) {
+                    if (!mergedNutMap.containsKey(rn.id)) {
+                        repository.addNutritionEntry(rn)
+                        mergedNutMap[rn.id] = rn
+                    }
+                }
+            }
+
+            // 5. Construct unified cloud payload and push to server
+            val passwordHash = prefs.getString("user_pass_${account.email}", remoteData?.passwordHash ?: "") ?: ""
+            val fullPayload = CloudUserData(
+                userId = account.userId,
+                email = account.email,
+                passwordHash = passwordHash,
+                displayName = account.displayName,
+                photoUrl = account.photoUrl ?: remoteData?.photoUrl,
+                updatedAt = System.currentTimeMillis(),
+                profile = localProfile,
+                workouts = mergedWorkoutsMap.values.toList(),
+                sleepLogs = mergedSleepMap.values.toList(),
+                nutritionLogs = mergedNutMap.values.toList(),
+                dailySteps = if (localTodaySteps != null) listOf(localTodaySteps) else remoteData?.dailySteps ?: emptyList()
             )
-            currentFirestore.collection("users").document(userId)
-                .set(profileMap, SetOptions.merge())
 
-            // 2. Sync Workouts (Bidirectional)
-            val localWorkouts: List<WorkoutEntity> = repository.allWorkoutsFlow.firstOrNull() ?: emptyList()
-            for (workout in localWorkouts) {
-                val workoutDocId = "w_${workout.id}"
-                val workoutMap = hashMapOf(
-                    "id" to workout.id,
-                    "type" to workout.type,
-                    "startTime" to workout.startTime,
-                    "endTime" to workout.endTime,
-                    "durationSeconds" to workout.durationSeconds,
-                    "distanceMeters" to workout.distanceMeters,
-                    "jumpCount" to workout.jumpCount,
-                    "caloriesBurned" to workout.caloriesBurned,
-                    "averagePaceSecPerKm" to (workout.averagePaceSecPerKm ?: 0.0),
-                    "localDate" to workout.localDate,
-                    "createdAt" to workout.createdAt
-                )
-                currentFirestore.collection("users").document(userId)
-                    .collection("workouts").document(workoutDocId)
-                    .set(workoutMap, SetOptions.merge())
+            val pushSuccess = CloudSyncService.pushUserData(fullPayload)
+
+            // 6. Optional Firestore sync fallback if configured
+            val currentFirestore = firestore
+            if (currentFirestore != null) {
+                try {
+                    val profileMap = hashMapOf(
+                        "fullName" to account.displayName,
+                        "age" to localProfile.age,
+                        "biologicalSex" to localProfile.biologicalSex,
+                        "heightCm" to localProfile.heightCm,
+                        "weightKg" to localProfile.weightKg,
+                        "fitnessGoal" to localProfile.fitnessGoal,
+                        "activityLevel" to localProfile.activityLevel,
+                        "updatedAt" to System.currentTimeMillis()
+                    )
+                    currentFirestore.collection("users").document(account.userId)
+                        .set(profileMap, SetOptions.merge())
+                } catch (_: Throwable) {}
             }
-
-            // Fetch remote workouts
-            val deferredFetchWorkouts = CompletableDeferred<Boolean>()
-            currentFirestore.collection("users").document(userId)
-                .collection("workouts")
-                .get()
-                .addOnSuccessListener { querySnapshot ->
-                    for (doc in querySnapshot.documents) {
-                        try {
-                            val workoutId = doc.getString("id") ?: doc.id.removePrefix("w_")
-                            val workoutType = doc.getString("type") ?: "RUNNING"
-                            val startTime = doc.getLong("startTime") ?: System.currentTimeMillis()
-                            val endTime = doc.getLong("endTime") ?: System.currentTimeMillis()
-                            val durationSeconds = doc.getLong("durationSeconds") ?: 0L
-                            val distanceMeters = doc.getDouble("distanceMeters") ?: 0.0
-                            val jumpCount = doc.getLong("jumpCount")?.toInt() ?: 0
-                            val caloriesBurned = doc.getDouble("caloriesBurned") ?: 0.0
-                            val avgPace = doc.getDouble("averagePaceSecPerKm")
-                            val localDate = doc.getString("localDate") ?: java.time.LocalDate.now().toString()
-                            val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
-
-                            val exists = localWorkouts.any { it.id == workoutId || it.createdAt == createdAt }
-                            if (!exists) {
-                                kotlinx.coroutines.runBlocking {
-                                    repository.saveWorkout(
-                                        WorkoutEntity(
-                                            id = workoutId,
-                                            type = workoutType,
-                                            startTime = startTime,
-                                            endTime = endTime,
-                                            durationSeconds = durationSeconds,
-                                            caloriesBurned = caloriesBurned,
-                                            distanceMeters = distanceMeters,
-                                            averagePaceSecPerKm = avgPace,
-                                            jumpCount = jumpCount,
-                                            localDate = localDate,
-                                            createdAt = createdAt,
-                                            updatedAt = createdAt
-                                        )
-                                    )
-                                }
-                            }
-                        } catch (_: Exception) {}
-                    }
-                    deferredFetchWorkouts.complete(true)
-                }
-                .addOnFailureListener {
-                    deferredFetchWorkouts.complete(false)
-                }
-            deferredFetchWorkouts.await()
-
-            // 3. Sync Sleep Logs (Bidirectional)
-            val localSleep: List<SleepEntryEntity> = repository.allSleepFlow.firstOrNull() ?: emptyList()
-            for (sleep in localSleep) {
-                val sleepDocId = "s_${sleep.id}"
-                val sleepMap = hashMapOf(
-                    "id" to sleep.id,
-                    "localDate" to sleep.localDate,
-                    "durationMinutes" to sleep.durationMinutes,
-                    "bedtime" to sleep.bedtime,
-                    "wakeTime" to sleep.wakeTime,
-                    "qualityRating" to sleep.qualityRating,
-                    "createdAt" to sleep.createdAt
-                )
-                currentFirestore.collection("users").document(userId)
-                    .collection("sleep").document(sleepDocId)
-                    .set(sleepMap, SetOptions.merge())
-            }
-
-            // Fetch remote sleep
-            val deferredFetchSleep = CompletableDeferred<Boolean>()
-            currentFirestore.collection("users").document(userId)
-                .collection("sleep")
-                .get()
-                .addOnSuccessListener { querySnapshot ->
-                    for (doc in querySnapshot.documents) {
-                        try {
-                            val sleepId = doc.getString("id") ?: doc.id.removePrefix("s_")
-                            val localDate = doc.getString("localDate") ?: ""
-                            val durationMinutes = doc.getLong("durationMinutes")?.toInt() ?: 0
-                            val bedtime = doc.getString("bedtime") ?: ""
-                            val wakeTime = doc.getString("wakeTime") ?: ""
-                            val qualityRating = doc.getLong("qualityRating")?.toInt() ?: 3
-                            val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
-
-                            val exists = localSleep.any { it.id == sleepId || (it.localDate == localDate && localDate.isNotEmpty()) }
-                            if (!exists && localDate.isNotEmpty()) {
-                                kotlinx.coroutines.runBlocking {
-                                    repository.logSleep(
-                                        SleepEntryEntity(
-                                            id = sleepId,
-                                            localDate = localDate,
-                                            durationMinutes = durationMinutes,
-                                            bedtime = bedtime,
-                                            wakeTime = wakeTime,
-                                            qualityRating = qualityRating,
-                                            createdAt = createdAt
-                                        )
-                                    )
-                                }
-                            }
-                        } catch (_: Exception) {}
-                    }
-                    deferredFetchSleep.complete(true)
-                }
-                .addOnFailureListener {
-                    deferredFetchSleep.complete(false)
-                }
-            deferredFetchSleep.await()
-
-            // 4. Sync Nutrition Entries (Bidirectional)
-            val localNutrition: List<NutritionEntryEntity> = repository.allNutritionFlow.firstOrNull() ?: emptyList()
-            for (nutrition in localNutrition) {
-                val nutDocId = "n_${nutrition.id}"
-                val nutMap = hashMapOf(
-                    "id" to nutrition.id,
-                    "localDate" to nutrition.localDate,
-                    "mealType" to nutrition.mealType,
-                    "foodName" to nutrition.foodName,
-                    "grams" to nutrition.grams,
-                    "calories" to nutrition.calories,
-                    "protein" to nutrition.protein,
-                    "carbs" to nutrition.carbs,
-                    "fat" to nutrition.fat,
-                    "createdAt" to nutrition.createdAt
-                )
-                currentFirestore.collection("users").document(userId)
-                    .collection("nutrition").document(nutDocId)
-                    .set(nutMap, SetOptions.merge())
-            }
-
-            // Fetch remote nutrition
-            val deferredFetchNut = CompletableDeferred<Boolean>()
-            currentFirestore.collection("users").document(userId)
-                .collection("nutrition")
-                .get()
-                .addOnSuccessListener { querySnapshot ->
-                    for (doc in querySnapshot.documents) {
-                        try {
-                            val nutId = doc.getString("id") ?: doc.id.removePrefix("n_")
-                            val localDate = doc.getString("localDate") ?: ""
-                            val mealType = doc.getString("mealType") ?: "CUSTOM"
-                            val foodName = doc.getString("foodName") ?: ""
-                            val grams = doc.getDouble("grams") ?: 100.0
-                            val calories = doc.getDouble("calories") ?: 0.0
-                            val protein = doc.getDouble("protein") ?: 0.0
-                            val carbs = doc.getDouble("carbs") ?: 0.0
-                            val fat = doc.getDouble("fat") ?: 0.0
-                            val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
-
-                            val exists = localNutrition.any { it.id == nutId }
-                            if (!exists && foodName.isNotEmpty()) {
-                                kotlinx.coroutines.runBlocking {
-                                    repository.addNutritionEntry(
-                                        NutritionEntryEntity(
-                                            id = nutId,
-                                            localDate = localDate,
-                                            mealType = mealType,
-                                            foodName = foodName,
-                                            grams = grams,
-                                            calories = calories,
-                                            protein = protein,
-                                            carbs = carbs,
-                                            fat = fat,
-                                            createdAt = createdAt
-                                        )
-                                    )
-                                }
-                            }
-                        } catch (_: Exception) {}
-                    }
-                    deferredFetchNut.complete(true)
-                }
-                .addOnFailureListener {
-                    deferredFetchNut.complete(false)
-                }
-            deferredFetchNut.await()
 
             val now = System.currentTimeMillis()
-            val updated = account.copy(isCloudSynced = true, lastSyncedAt = now)
+            val updated = account.copy(isCloudSynced = pushSuccess, lastSyncedAt = now)
             saveAccount(updated)
             _syncStatus.value = SyncStatus.Synced(now)
         } catch (e: Throwable) {

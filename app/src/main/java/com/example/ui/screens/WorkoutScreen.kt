@@ -165,10 +165,10 @@ fun WorkoutIdleView(
 ) {
     val isKm = viewModel.appLanguage.collectAsState().value.code == "km"
     val modalities = listOf(
-        Triple("RUNNING", StringKey.WORKOUT_RUNNING, Icons.Default.DirectionsRun),
-        Triple("WALKING", StringKey.WORKOUT_WALKING, Icons.Default.DirectionsWalk),
-        Triple("JUMPING", StringKey.WORKOUT_JUMPING, Icons.Default.VerticalAlignTop),
-        Triple("WEIGHTLIFTING", StringKey.WORKOUT_WEIGHTLIFTING, Icons.Default.FitnessCenter)
+        listOf("RUNNING", StringKey.WORKOUT_RUNNING, Icons.Default.DirectionsRun, Color(0xFFC6FF00)),
+        listOf("WALKING", StringKey.WORKOUT_WALKING, Icons.Default.DirectionsWalk, Color(0xFF00E5FF)),
+        listOf("JUMPING", StringKey.WORKOUT_JUMPING, Icons.Default.Bolt, Color(0xFFFFAB00)),
+        listOf("WEIGHTLIFTING", StringKey.WORKOUT_WEIGHTLIFTING, Icons.Default.FitnessCenter, Color(0xFFB388FF))
     )
 
     LazyColumn(
@@ -182,7 +182,8 @@ fun WorkoutIdleView(
             Text(
                 text = viewModel.str(StringKey.NAV_WORKOUT),
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-0.5).sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             )
@@ -195,18 +196,25 @@ fun WorkoutIdleView(
             )
         }
 
-        items(modalities) { (type, stringKey, icon) ->
+        items(modalities) { item ->
+            val type = item[0] as String
+            val stringKey = item[1] as StringKey
+            val icon = item[2] as androidx.compose.ui.graphics.vector.ImageVector
+            val accentColor = item[3] as Color
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
                     .testTag("workout_card_$type"),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.25f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -218,14 +226,14 @@ fun WorkoutIdleView(
                         Box(
                             modifier = Modifier
                                 .size(50.dp)
-                                .clip(CircleShape)
-                                .background(LimeAccent.copy(alpha = 0.18f)),
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(accentColor.copy(alpha = 0.16f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = icon,
                                 contentDescription = type,
-                                tint = LimeAccent,
+                                tint = accentColor,
                                 modifier = Modifier.size(26.dp)
                             )
                         }
@@ -235,11 +243,13 @@ fun WorkoutIdleView(
                                 text = viewModel.str(stringKey),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
+                                    letterSpacing = (-0.3).sp,
                                     color = MaterialTheme.colorScheme.onSurface
                                 ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = when (type) {
                                     "RUNNING" -> if (isKm) "ល្បឿន GPS ចម្ងាយ និងកាឡូរី" else "GPS pace, distance & calories"
@@ -261,7 +271,7 @@ fun WorkoutIdleView(
                     Button(
                         onClick = { viewModel.startWorkout(type) },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = LimeAccent,
+                            containerColor = accentColor,
                             contentColor = CharcoalBackground
                         ),
                         shape = RoundedCornerShape(14.dp),
@@ -270,7 +280,7 @@ fun WorkoutIdleView(
                     ) {
                         Text(
                             text = viewModel.str(StringKey.SESSION_START),
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
                             maxLines = 1,
                             softWrap = false
                         )

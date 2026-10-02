@@ -604,6 +604,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
 
             repository.saveWorkout(workout, exerciseEntities, setEntities)
             repository.clearActiveSession()
+            triggerCloudSync()
 
             com.example.services.WorkoutForegroundService.stopService(getApplication())
             activeWorkout.value = ActiveWorkoutUiState()
@@ -624,6 +625,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
     fun deleteWorkout(workoutId: String) {
         viewModelScope.launch {
             repository.deleteWorkout(workoutId)
+            triggerCloudSync()
         }
     }
 
@@ -658,12 +660,14 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
                 fat = scaled.fat
             )
             repository.addNutritionEntry(entry)
+            triggerCloudSync()
         }
     }
 
     fun deleteNutritionEntry(entry: NutritionEntryEntity) {
         viewModelScope.launch {
             repository.deleteNutritionEntry(entry)
+            triggerCloudSync()
         }
     }
 
@@ -698,6 +702,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
                 qualityRating = quality
             )
             repository.logSleep(entry)
+            triggerCloudSync()
         }
     }
 
@@ -782,6 +787,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
                 fitnessGoal = goal
             )
             repository.updateProfile(updated)
+            triggerCloudSync()
         }
     }
 
@@ -813,7 +819,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
     // Account & Cloud Sync Actions
     fun signInWithEmail(email: String, pass: String, onDone: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
-            val res = accountManager.signInWithEmail(email, pass)
+            val res = accountManager.signInWithEmail(email, pass, repository)
             onDone(res.isSuccess, res.errorMessage)
             if (res.isSuccess) {
                 accountManager.performCloudSync(repository)
@@ -823,7 +829,7 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
 
     fun signUpWithEmail(name: String, email: String, pass: String, onDone: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
-            val res = accountManager.signUpWithEmail(name, email, pass)
+            val res = accountManager.signUpWithEmail(name, email, pass, repository)
             onDone(res.isSuccess, res.errorMessage)
             if (res.isSuccess) {
                 val current = profile.value ?: com.example.data.ProfileEntity()

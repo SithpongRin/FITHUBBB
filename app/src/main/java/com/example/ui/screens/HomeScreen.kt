@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,6 +29,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import coil.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.calculations.*
@@ -166,7 +168,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(top = 18.dp, bottom = 100.dp)
     ) {
-        // 1. Header: Greeting, User Name, Profile Button
+        // 1. Sleek Command Bar Header
         item {
             Row(
                 modifier = Modifier
@@ -176,27 +178,55 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
+                    // Cloud Status Beacon & Greeting Pill
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(if (currentAccount.isOnline) SuccessGreen else WarningAmber)
+                        )
                         Text(
-                            text = viewModel.str(greetingKey),
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = if (currentAccount.isOnline) {
+                                if (isKm) "ភ្ជាប់ Cloud រួចរាល់" else "Live Cloud Sync"
+                            } else {
+                                if (isKm) "Offline Mode" else "Offline Ready"
+                            },
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = if (currentAccount.isOnline) SuccessGreen else WarningAmber,
+                                fontSize = 10.5.sp
                             )
                         )
-                        Icon(
-                            imageVector = if (currentAccount.isOnline) Icons.Default.CloudDone else Icons.Default.CloudOff,
-                            contentDescription = "Sync status",
-                            tint = if (currentAccount.isOnline) SuccessGreen else WarningAmber,
-                            modifier = Modifier.size(15.dp)
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
+                        )
+                        Text(
+                            text = viewModel.str(greetingKey),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 10.5.sp
+                            )
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
                         text = if (currentAccount.isOnline) currentAccount.displayName else (profile?.fullName ?: "Athlete"),
                         style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-0.5).sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     )
@@ -206,11 +236,11 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Language Switcher Button (Khmer / English)
+                    // Glass Language Switcher Button (Khmer / English)
                     Box(
                         modifier = Modifier
-                            .height(42.dp)
-                            .clip(RoundedCornerShape(21.dp))
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(20.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { viewModel.toggleLanguage() }
                             .padding(horizontal = 12.dp)
@@ -220,16 +250,16 @@ fun HomeScreen(
                         Text(
                             text = if (viewModel.appLanguage.collectAsState().value.code == "km") "ខ្មែរ" else "EN",
                             style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Black,
                                 color = LimeAccent
                             )
                         )
                     }
 
-                    // Theme Switch Button (Moon / Sun)
+                    // Theme Switch Button
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(40.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { viewModel.toggleDarkMode() }
@@ -240,15 +270,16 @@ fun HomeScreen(
                             imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
                             contentDescription = "Toggle Light/Dark Theme",
                             tint = if (isDarkMode) WarningAmber else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
 
-                    // Profile Button (with Google Account Picture)
+                    // Profile Avatar with Neon Accent Ring
                     Box(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(CircleShape)
+                            .border(1.5.dp, LimeAccent, CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable(onClick = onOpenProfile)
                             .testTag("header_profile_button"),
@@ -258,7 +289,7 @@ fun HomeScreen(
                         if (!avatarUrl.isNullOrEmpty()) {
                             AsyncImage(
                                 model = avatarUrl,
-                                contentDescription = "Google Profile Picture",
+                                contentDescription = "Profile Picture",
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -269,7 +300,7 @@ fun HomeScreen(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = "Profile",
                                 tint = LimeAccent,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
@@ -353,59 +384,93 @@ fun HomeScreen(
             )
         }
 
-        // 3. Daily Steps Sensor Quick Switch
+        // 3. Hardware Motion Sensor Card
         item(key = "card_step_sensor_toggle") {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(24.dp))
                     .testTag("card_daily_steps"),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (isStepTrackingEnabled) LimeAccent.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 18.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
+                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(if (isStepTrackingEnabled) LimeAccent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface),
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(if (isStepTrackingEnabled) LimeAccent.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surface),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.DirectionsWalk,
-                                contentDescription = "Steps",
+                                contentDescription = "Steps Sensor",
                                 tint = if (isStepTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         }
 
-                        Column {
-                            Text(
-                                text = viewModel.str(StringKey.DAILY_STEPS),
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                            )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = viewModel.str(StringKey.DAILY_STEPS),
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = (-0.3).sp
+                                    )
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isStepTrackingEnabled) LimeAccent.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = if (isStepTrackingEnabled) "24/7 AUTO" else "OFF",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 9.sp,
+                                            color = if (isStepTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = if (isStepTrackingEnabled) {
-                                    viewModel.str(StringKey.STEP_TRACKING_ON) + " (Auto 24/7)"
+                                    if (isKm) "ឧបករណ៍ Sensor រាប់ជំហានដោយស្វ័យប្រវត្តិក្នងទូរសព្ទ" else "Hardware sensor tracking walking continuously in background"
                                 } else {
-                                    viewModel.str(StringKey.STEP_TRACKING_OFF)
+                                    if (isKm) "ការរាប់ជំហានត្រូវបានផ្អាកជាបណ្ដោះអាសន្ន" else "Background step sensor currently paused"
                                 },
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = if (isStepTrackingEnabled) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 11.sp
-                                )
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 11.5.sp
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.width(10.dp))
 
                     Switch(
                         checked = isStepTrackingEnabled,
@@ -449,6 +514,7 @@ fun HomeScreen(
                         title = viewModel.str(StringKey.ACTION_RUNNING),
                         icon = Icons.Default.DirectionsRun,
                         testTag = "quick_action_running",
+                        accentColor = Color(0xFFC6FF00),
                         onClick = { viewModel.startWorkout("RUNNING") },
                         modifier = Modifier.weight(1f)
                     )
@@ -457,6 +523,7 @@ fun HomeScreen(
                         title = viewModel.str(StringKey.ACTION_WALKING),
                         icon = Icons.Default.DirectionsWalk,
                         testTag = "quick_action_walking",
+                        accentColor = Color(0xFF00E5FF),
                         onClick = { viewModel.startWorkout("WALKING") },
                         modifier = Modifier.weight(1f)
                     )
@@ -465,6 +532,7 @@ fun HomeScreen(
                         title = viewModel.str(StringKey.ACTION_JUMPING),
                         icon = Icons.Default.Bolt,
                         testTag = "quick_action_jumping",
+                        accentColor = Color(0xFFFFAB00),
                         onClick = { viewModel.startWorkout("JUMPING") },
                         modifier = Modifier.weight(1f)
                     )
@@ -473,6 +541,7 @@ fun HomeScreen(
                         title = viewModel.str(StringKey.ACTION_WEIGHTLIFTING),
                         icon = Icons.Default.FitnessCenter,
                         testTag = "quick_action_lifting",
+                        accentColor = Color(0xFFB388FF),
                         onClick = { viewModel.startWorkout("WEIGHTLIFTING") },
                         modifier = Modifier.weight(1f)
                     )
@@ -490,7 +559,9 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
                     .testTag("card_todays_routine"),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -499,22 +570,46 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = viewModel.str(StringKey.TODAYS_WORKOUT),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (scheduledToday != null) {
-                                "${scheduledToday.workoutType} at ${scheduledToday.timeString}"
-                            } else {
-                                viewModel.str(StringKey.NO_SCHEDULED_WORKOUT)
-                            },
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(LimeAccent.copy(alpha = 0.16f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = "Schedule",
+                                tint = LimeAccent,
+                                modifier = Modifier.size(22.dp)
                             )
-                        )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = viewModel.str(StringKey.TODAYS_WORKOUT),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = (-0.3).sp
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (scheduledToday != null) {
+                                    "${scheduledToday.workoutType} • ${scheduledToday.timeString}"
+                                } else {
+                                    viewModel.str(StringKey.NO_SCHEDULED_WORKOUT)
+                                },
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
                     }
 
                     if (scheduledToday != null) {
@@ -530,7 +625,7 @@ fun HomeScreen(
                         ) {
                             Text(
                                 text = viewModel.str(StringKey.SESSION_START),
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Black,
                                 maxLines = 1,
                                 softWrap = false
                             )
@@ -547,7 +642,9 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
                     .testTag("card_sleep_recovery"),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -556,46 +653,61 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color(0xFF7986CB).copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Bedtime,
                                 contentDescription = "Sleep",
-                                tint = LimeAccent,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = viewModel.str(StringKey.SLEEP_RECOVERY),
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                tint = Color(0xFF9FA8DA),
+                                modifier = Modifier.size(24.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (lastSleep != null) {
-                                val hours = lastSleep.durationMinutes / 60
-                                val mins = lastSleep.durationMinutes % 60
-                                "$hours h $mins m recorded"
-                            } else {
-                                "No sleep logged for today"
-                            },
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = viewModel.str(StringKey.SLEEP_RECOVERY),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = (-0.3).sp
+                                )
                             )
-                        )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (lastSleep != null) {
+                                    val hours = lastSleep.durationMinutes / 60
+                                    val mins = lastSleep.durationMinutes % 60
+                                    if (isKm) "$hours ម៉ោង $mins នាទី (បានកត់ត្រា)" else "$hours h $mins m recorded"
+                                } else {
+                                    if (isKm) "មិនទាន់បានកត់ត្រាការគេងថ្ងៃនេះទេ" else "No sleep logged for today"
+                                },
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(10.dp))
                     OutlinedButton(
                         onClick = onOpenSleepDialog,
                         shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, LimeAccent)
                     ) {
                         Text(
                             text = viewModel.str(StringKey.LOG_SLEEP),
                             color = LimeAccent,
+                            fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             softWrap = false
                         )
@@ -611,7 +723,9 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
                     .testTag("card_nutrition_summary"),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Row(
@@ -621,28 +735,40 @@ fun HomeScreen(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Restaurant,
-                                contentDescription = "Nutrition",
-                                tint = LimeAccent,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFFFF7043).copy(alpha = 0.18f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Restaurant,
+                                    contentDescription = "Nutrition",
+                                    tint = Color(0xFFFF7043),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                             Text(
                                 text = viewModel.str(StringKey.NUTRITION_SUMMARY),
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = (-0.3).sp
+                                )
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
                     // Calories progress
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = viewModel.str(StringKey.CALORIES),
@@ -650,28 +776,29 @@ fun HomeScreen(
                             )
                             Text(
                                 text = "${consumedCalories.toInt()} / $targetCalories kcal",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = LimeAccent, fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.bodyMedium.copy(color = LimeAccent, fontWeight = FontWeight.Black)
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         LinearProgressIndicator(
                             progress = { if (targetCalories > 0) (consumedCalories / targetCalories).toFloat().coerceIn(0f, 1f) else 0f },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(6.dp)
+                                .height(8.dp)
                                 .clip(CircleShape),
                             color = LimeAccent,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Protein progress
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = viewModel.str(StringKey.PROTEIN),
@@ -679,18 +806,18 @@ fun HomeScreen(
                             )
                             Text(
                                 text = "${FormatUtils.formatGrams(consumedProtein)} / ${FormatUtils.formatGrams(proteinRange.maxGrams)}",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF00E5FF), fontWeight = FontWeight.Black)
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         LinearProgressIndicator(
                             progress = { if (proteinRange.maxGrams > 0) (consumedProtein / proteinRange.maxGrams).toFloat().coerceIn(0f, 1f) else 0f },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(6.dp)
+                                .height(8.dp)
                                 .clip(CircleShape),
-                            color = Color.White,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            color = Color(0xFF00E5FF),
+                            trackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
                         )
                     }
                 }

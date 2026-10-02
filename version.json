@@ -1,9 +1,9 @@
 {
-  "versionCode": 4,
-  "versionName": "1.0.3",
+  "versionCode": 5,
+  "versionName": "1.0.4",
   "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk",
-  "releaseNotesEn": "Update v1.0.3: Beautiful redesigned Jump Rope UI with sleek sensor calibration, and 100% accurate physics-based calories (zero phantom calories while idle).",
-  "releaseNotesKm": "កំណែថ្មី v1.0.3៖ UI Jump Rope ស្អាតប្រណិត ដាក់ Calibrate ដាច់ដោយឡែក, និងការគណនា Calories សុក្រិត ១០០% ផ្អែកលើចលនាពិត (គ្មានការកើន Calories ពេលឈរស្ងៀមទៀតឡើយ)។",
-  "fileSizeBytes": 29180000,
+  "releaseNotesEn": "Update v1.0.4: Real external cloud sync server persistence across devices and reinstalls, plus high-end sports UI design modernization across Home and Workout screens.",
+  "releaseNotesKm": "កំណែថ្មី v1.0.4៖ Sync ទិន្នន័យលើ Server ខាងក្រៅស្វ័យប្រវត្តិ (ដូរទូរសព្ទថ្មី ឬ install ឡើងវិញមិនបាត់ទិន្នន័យចាស់ឡើយ) រួមទាំងការកែលម្អ UI Dashboard និងលំហាត់ប្រាណបែបទំនើបស៊ីវិល័យ។",
+  "fileSizeBytes": 29300000,
   "mandatory": false
 }

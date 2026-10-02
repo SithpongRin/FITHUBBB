@@ -433,20 +433,22 @@ fun QuickActionButton(
     icon: ImageVector,
     testTag: String,
     onClick: () -> Unit,
+    accentColor: Color = LimeAccent,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
             .testTag(testTag),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.25f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(vertical = 14.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -454,13 +456,13 @@ fun QuickActionButton(
                 modifier = Modifier
                     .size(46.dp)
                     .clip(CircleShape)
-                    .background(LimeAccent.copy(alpha = 0.18f)),
+                    .background(accentColor.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    tint = LimeAccent,
+                    tint = accentColor,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -470,9 +472,10 @@ fun QuickActionButton(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 12.sp
+                    fontSize = 11.5.sp,
+                    letterSpacing = (-0.2).sp
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
