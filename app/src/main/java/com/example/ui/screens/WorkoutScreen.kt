@@ -454,85 +454,178 @@ fun ActiveSessionView(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(28.dp))
+                            .clip(RoundedCornerShape(32.dp))
                             .testTag("jump_counter_card"),
                         colors = CardDefaults.cardColors(containerColor = LimeAccent)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(28.dp),
+                                .padding(horizontal = 22.dp, vertical = 24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(
-                                text = viewModel.str(StringKey.JUMP_COUNT),
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalBackground
-                                )
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                text = "${activeWorkout.jumpCount}",
-                                style = MaterialTheme.typography.headlineLarge.copy(
-                                    fontSize = 64.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = CharcoalBackground
-                                )
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-
+                            // Header Row: Sensor Badge on left & sleek Calibrate chip on right
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                FilledIconButton(
-                                    onClick = { jumpDetector.manualDecrement() },
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = CharcoalBackground,
-                                        contentColor = Color.White
-                                    )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(CharcoalBackground.copy(alpha = 0.12f))
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
                                 ) {
-                                    Icon(Icons.Default.Remove, contentDescription = "Minus 1")
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(CharcoalBackground)
+                                    )
+                                    Text(
+                                        text = viewModel.str(StringKey.JUMP_COUNT),
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = CharcoalBackground
+                                        )
+                                    )
                                 }
 
-                                FilledIconButton(
-                                    onClick = { jumpDetector.manualIncrement() },
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = CharcoalBackground,
-                                        contentColor = Color.White
-                                    )
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = "Plus 1")
-                                }
-
-                                OutlinedButton(
+                                Surface(
                                     onClick = {
                                         jumpDetector.startCalibration()
                                         showCalibrateDialog = true
                                     },
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = CharcoalBackground
-                                    )
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = CharcoalBackground.copy(alpha = 0.15f)
                                 ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Tune,
+                                            contentDescription = "Calibrate",
+                                            tint = CharcoalBackground,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                        Text(
+                                            text = if (isKm) "ក្រិត Sensor" else "Calibrate",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = CharcoalBackground
+                                            ),
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Giant Jump Count Display
+                            Text(
+                                text = "${activeWorkout.jumpCount}",
+                                style = MaterialTheme.typography.displayLarge.copy(
+                                    fontSize = 76.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = CharcoalBackground,
+                                    letterSpacing = (-2).sp
+                                )
+                            )
+
+                            Text(
+                                text = if (isKm) "ចំនួនលោតសរុប (Jumps)" else "Total Jumps Counted",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = CharcoalBackground.copy(alpha = 0.7f)
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            // Centered, Symmetrical Stepper Capsule
+                            Surface(
+                                shape = RoundedCornerShape(24.dp),
+                                color = CharcoalBackground.copy(alpha = 0.12f)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                                ) {
+                                    FilledIconButton(
+                                        onClick = { jumpDetector.manualDecrement() },
+                                        modifier = Modifier.size(38.dp),
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = CharcoalBackground,
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Remove,
+                                            contentDescription = "Minus 1",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+
                                     Text(
-                                        text = viewModel.str(StringKey.CALIBRATE_JUMP),
-                                        fontWeight = FontWeight.Bold
+                                        text = if (isKm) "កែសម្រួលដោយដៃ" else "Manual Adjust",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = CharcoalBackground
+                                        )
                                     )
+
+                                    FilledIconButton(
+                                        onClick = { jumpDetector.manualIncrement() },
+                                        modifier = Modifier.size(38.dp),
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = CharcoalBackground,
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "Plus 1",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
+                // Two side-by-side metric cards: Calories Burned & Jump Cadence (Rate)
                 item {
-                    StatCard(
-                        title = viewModel.str(StringKey.CALORIES_BURNED),
-                        value = FormatUtils.formatCalories(activeWorkout.caloriesBurned),
-                        icon = Icons.Default.LocalFireDepartment,
-                        testTag = "jump_calories",
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    val cadence = if (activeWorkout.elapsedSeconds > 5) {
+                        ((activeWorkout.jumpCount.toFloat() / activeWorkout.elapsedSeconds) * 60f).toInt()
+                    } else 0
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        StatCard(
+                            title = viewModel.str(StringKey.CALORIES_BURNED),
+                            value = FormatUtils.formatCalories(activeWorkout.caloriesBurned),
+                            icon = Icons.Default.LocalFireDepartment,
+                            testTag = "jump_calories",
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        StatCard(
+                            title = if (isKm) "ល្បឿនលោត" else "Jump Cadence",
+                            value = "$cadence /m",
+                            icon = Icons.Default.Speed,
+                            testTag = "jump_cadence",
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 

@@ -505,8 +505,10 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    val displayVerName = try { com.example.BuildConfig.VERSION_NAME } catch (_: Throwable) { UpdateManager.CURRENT_VERSION_NAME }
+                    val displayVerCode = try { com.example.BuildConfig.VERSION_CODE } catch (_: Throwable) { UpdateManager.CURRENT_VERSION_CODE }
                     Text(
-                        text = "${viewModel.str(StringKey.CURRENT_VERSION)}: ${UpdateManager.CURRENT_VERSION_NAME} (Build ${UpdateManager.CURRENT_VERSION_CODE})",
+                        text = "${viewModel.str(StringKey.CURRENT_VERSION)}: $displayVerName (Build $displayVerCode)",
                         style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                     )
 

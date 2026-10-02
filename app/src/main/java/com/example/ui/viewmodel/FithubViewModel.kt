@@ -372,20 +372,8 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
                     val newSeconds = current.elapsedSeconds + 1
                     val weight = profile.value?.weightKg ?: 70.0
 
-                    // Compute live calories
-                    val met = when (current.type) {
-                        "RUNNING" -> {
-                            val speedKmH = PaceCalculator.calculateSpeedKmH(current.distanceMeters, newSeconds)
-                            CalorieCalculator.interpolateRunningMet(speedKmH)
-                        }
-                        "WALKING" -> {
-                            val speedKmH = PaceCalculator.calculateSpeedKmH(current.distanceMeters, newSeconds)
-                            CalorieCalculator.interpolateWalkingMet(speedKmH)
-                        }
-                        "JUMPING" -> Constants.MET_JUMP_ROPE
-                        else -> Constants.MET_WEIGHTLIFTING_DEFAULT
-                    }
-                    val calories = CalorieCalculator.calculateWorkoutCalories(met, weight, newSeconds)
+                    // Compute live calories strictly based on actual physical movements (no phantom calories while idle)
+                    val calories = calculateActiveWorkoutCalories(current, weight)
 
                     activeWorkout.value = current.copy(
                         elapsedSeconds = newSeconds,
@@ -422,6 +410,42 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun calculateActiveWorkoutCalories(
+        current: ActiveWorkoutUiState,
+        weightKg: Double
+    ): Double {
+        val safeWeight = if (weightKg > 0) weightKg else 70.0
+        return when (current.type) {
+            "JUMPING" -> {
+                // Calorie burn comes strictly from actual jumps performed
+                // 0 jumps = strictly 0.0 kcal (no phantom calorie ticking while standing still)
+                if (current.jumpCount <= 0) 0.0
+                else current.jumpCount * (safeWeight / 70.0) * 0.17
+            }
+            "RUNNING" -> {
+                // Standing still / distance < 5 meters = strictly 0.0 kcal
+                if (current.distanceMeters < 5.0) 0.0
+                else safeWeight * (current.distanceMeters / 1000.0) * 1.036
+            }
+            "WALKING" -> {
+                // Standing still / distance < 5 meters = strictly 0.0 kcal
+                if (current.distanceMeters < 5.0) 0.0
+                else safeWeight * (current.distanceMeters / 1000.0) * 0.75
+            }
+            "WEIGHTLIFTING" -> {
+                // Calorie burn comes strictly from completed sets and lifted volume
+                val completedSets = current.exercises.flatMap { it.sets }.filter { it.completed }
+                if (completedSets.isEmpty()) 0.0
+                else {
+                    val setsCount = completedSets.size
+                    val volumeKg = completedSets.sumOf { it.reps * it.weightKg }
+                    (setsCount * 3.5 * (safeWeight / 70.0)) + (volumeKg * 0.002)
+                }
+            }
+            else -> 0.0
+        }
+    }
+
     fun pauseWorkout() {
         activeWorkout.value = activeWorkout.value.copy(isPaused = true)
         com.example.services.WorkoutForegroundService.pauseService(getApplication())
@@ -434,15 +458,27 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
 
     fun updateGpsDistance(distanceMeters: Double, speedMps: Double) {
         if (!activeWorkout.value.isActive || activeWorkout.value.isPaused) return
+        val current = activeWorkout.value
+        val weight = profile.value?.weightKg ?: 70.0
+        val factor = if (current.type == "RUNNING") 1.036 else 0.75
+        val newCalories = if (distanceMeters < 5.0) 0.0 else weight * (distanceMeters / 1000.0) * factor
         activeWorkout.value = activeWorkout.value.copy(
             distanceMeters = distanceMeters,
-            currentSpeedMps = speedMps
+            currentSpeedMps = speedMps,
+            caloriesBurned = newCalories
         )
     }
 
     fun updateJumpCount(count: Int) {
         if (!activeWorkout.value.isActive || activeWorkout.value.isPaused) return
-        activeWorkout.value = activeWorkout.value.copy(jumpCount = count)
+        val current = activeWorkout.value
+        val weight = profile.value?.weightKg ?: 70.0
+        val safeCount = maxOf(0, count)
+        val newCalories = if (safeCount <= 0) 0.0 else safeCount * (weight / 70.0) * 0.17
+        activeWorkout.value = activeWorkout.value.copy(
+            jumpCount = safeCount,
+            caloriesBurned = newCalories
+        )
     }
 
     fun toggleSetCompleted(exerciseId: String, setIndex: Int) {
@@ -460,7 +496,18 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
                 exercise.copy(sets = updatedSets)
             } else exercise
         }
-        activeWorkout.value = activeWorkout.value.copy(exercises = currentExercises)
+        val weight = profile.value?.weightKg ?: 70.0
+        val completedSets = currentExercises.flatMap { it.sets }.filter { it.completed }
+        val newCalories = if (completedSets.isEmpty()) 0.0
+        else {
+            val setsCount = completedSets.size
+            val volumeKg = completedSets.sumOf { it.reps * it.weightKg }
+            (setsCount * 3.5 * (weight / 70.0)) + (volumeKg * 0.002)
+        }
+        activeWorkout.value = activeWorkout.value.copy(
+            exercises = currentExercises,
+            caloriesBurned = newCalories
+        )
     }
 
     fun startRestTimer(seconds: Int) {

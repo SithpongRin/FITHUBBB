@@ -1,9 +1,9 @@
 {
-  "versionCode": 3,
-  "versionName": "1.0.2",
+  "versionCode": 4,
+  "versionName": "1.0.3",
   "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk",
-  "releaseNotesEn": "New update v1.0.2: Smooth UI overhaul, zero-typing biometrics steppers, 0-59 scrollable minutes, custom workout titles, and living animations.",
-  "releaseNotesKm": "កំណែថ្មី v1.0.2៖ កែសម្រួល UI ស្អាត គ្មានការវាយអក្សរ Biometrics (ប្រើ Steppers), នាទីរំកិលបានពី ០ ដល់ ៥៩, ដាក់ Title និង Save ការហាត់, និងចលនា Animation រលូន។",
+  "releaseNotesEn": "Update v1.0.3: Beautiful redesigned Jump Rope UI with sleek sensor calibration, and 100% accurate physics-based calories (zero phantom calories while idle).",
+  "releaseNotesKm": "កំណែថ្មី v1.0.3៖ UI Jump Rope ស្អាតប្រណិត ដាក់ Calibrate ដាច់ដោយឡែក, និងការគណនា Calories សុក្រិត ១០០% ផ្អែកលើចលនាពិត (គ្មានការកើន Calories ពេលឈរស្ងៀមទៀតឡើយ)។",
   "fileSizeBytes": 29180000,
   "mandatory": false
 }
