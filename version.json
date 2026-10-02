@@ -1,9 +1,9 @@
 {
-  "versionCode": 8,
-  "versionName": "1.0.7",
+  "versionCode": 9,
+  "versionName": "1.0.8",
   "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk",
-  "releaseNotesEn": "Update v1.0.7: Fixed text wrapping issues (Jump Cadence tag, Resume button, Progress vs Yesterday badge), unified Daily Walking and 24/7 motion sensor card, redesigned workout routine plans with exercise breakdown modal, and added comprehensive Cloud Firestore synchronization.",
-  "releaseNotesKm": "កំណែថ្មី v1.0.7៖ ដោះស្រាយបញ្ហាអក្សរធ្លាក់បន្ទាត់ (Jump Cadence, ប៊ូតុង Resume, Badge Progress), បញ្ចូលកាតដើរប្រចាំថ្ងៃជាមួយប៊ូតុង Sensor 24/7 ឱ្យនៅជាមួយគ្នាស្អាត, កែលម្អផ្ទាំង Routine ហាត់ប្រាណអាចមើលលំហាត់លម្អិត, និងបន្ថែមប្រព័ន្ធ Sync ទៅកាន់ Cloud Firestore។",
-  "fileSizeBytes": 28939556,
+  "releaseNotesEn": "Update v1.0.8: Full Firebase Cloud Firestore synchronization with official google-services.json, luxury UI layout polish, and automatic seamless background updates.",
+  "releaseNotesKm": "កំណែថ្មី v1.0.8៖ ភ្ជាប់ប្រព័ន្ធ Firebase Cloud Firestore ផ្លូវការជាមួយ google-services.json, កែលម្អ UI ឱ្យកាន់តែប្រណិត, និងគាំទ្រការអាប់ដេតតាម App ផ្ទាល់។",
+  "fileSizeBytes": 29830616,
   "mandatory": false
 }
