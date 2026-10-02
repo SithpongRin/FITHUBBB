@@ -1,9 +1,9 @@
 {
-  "versionCode": 12,
-  "versionName": "1.1.1",
+  "versionCode": 13,
+  "versionName": "1.1.2",
   "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk",
-  "releaseNotesEn": "Update v1.1.1: Fixed workout history delete resurrection bug during cloud sync, added jumping milestone alerts (tone, haptics, banner at 10, 50, 100, 200, 300+ jumps), added Everyday reminder option in workout scheduler, and comprehensive bug fixes.",
-  "releaseNotesKm": "កំណែថ្មី v1.1.1៖ កែសម្រួលការលុបប្រវត្តិហាត់ប្រាណមិនឱ្យលោតមកវិញពេល sync, បន្ថែម Alert សំឡេង រំញ័រ និងផ្ទាំងអបអរសាទរពេលលោតដល់ 10, 50, 100, 200, 300+ ដង, បន្ថែមជម្រើសរំលឹក រាល់ថ្ងៃ (Everyday) លើកាលវិភាគ, និងដោះស្រាយ bug នានា។",
-  "fileSizeBytes": 28976046,
+  "releaseNotesEn": "Update v1.1.2: Added loud audio chime and Voice Coach TTS announcing jump counts on milestones (10, 50, 100, 200, 300+ jumps), enhanced notification reliability, fixed history deletion resurrection bug, and added Everyday workout reminder.",
+  "releaseNotesKm": "កំណែថ្មី v1.1.2៖ បន្ថែមសំឡេងរោទ៍ខ្លាំង និងសំឡេង Voice Coach អានប្រាប់ចំនួនដងនៃការលោតខ្សែ (10, 50, 100, 200, 300+ ដង), ពង្រឹងប្រព័ន្ធ Notification ឱ្យដំណើរការត្រឹមត្រូវ, កែសម្រួលការលុបប្រវត្តិមិនឱ្យលោតមកវិញ, និងបន្ថែមជម្រើសរំលឹក រាល់ថ្ងៃ (Everyday)។",
+  "fileSizeBytes": 28976050,
   "mandatory": false
 }

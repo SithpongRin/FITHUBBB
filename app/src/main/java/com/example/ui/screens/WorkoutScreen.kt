@@ -362,6 +362,27 @@ fun ActiveSessionView(
     var milestoneAlertCount by remember { mutableStateOf<Int?>(null) }
     var lastAlertedCount by remember { mutableIntStateOf(0) }
 
+    var ttsInstance by remember { mutableStateOf<android.speech.tts.TextToSpeech?>(null) }
+
+    DisposableEffect(context) {
+        val tts = android.speech.tts.TextToSpeech(context.applicationContext) { status ->
+            if (status == android.speech.tts.TextToSpeech.SUCCESS) {
+                val kmLocale = java.util.Locale("km", "KH")
+                val res = ttsInstance?.setLanguage(kmLocale)
+                if (res == android.speech.tts.TextToSpeech.LANG_MISSING_DATA || res == android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED) {
+                    ttsInstance?.setLanguage(java.util.Locale.US)
+                }
+            }
+        }
+        ttsInstance = tts
+        onDispose {
+            try {
+                tts.stop()
+                tts.shutdown()
+            } catch (_: Throwable) {}
+        }
+    }
+
     LaunchedEffect(activeWorkout.jumpCount, activeWorkout.type) {
         if (activeWorkout.type == "JUMPING") {
             val count = activeWorkout.jumpCount
@@ -370,13 +391,36 @@ fun ActiveSessionView(
                 lastAlertedCount = count
                 milestoneAlertCount = count
 
-                // Sound tone alert
+                // 1. Loud Chime via RingtoneManager
                 try {
-                    val toneGen = android.media.ToneGenerator(android.media.AudioManager.STREAM_NOTIFICATION, 100)
-                    toneGen.startTone(android.media.ToneGenerator.TONE_PROP_BEEP2, 400)
+                    val notifUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+                    val r = android.media.RingtoneManager.getRingtone(context.applicationContext, notifUri)
+                    r?.play()
                 } catch (_: Throwable) {}
 
-                // Haptic vibration alert
+                // 2. Loud Audio Tone via STREAM_MUSIC
+                try {
+                    val toneGen = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 100)
+                    toneGen.startTone(android.media.ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 400)
+                } catch (_: Throwable) {}
+
+                // 3. Spoken Voice Announcement via TTS
+                try {
+                    val kmLocale = java.util.Locale("km", "KH")
+                    val isKmSupported = ttsInstance?.let { t ->
+                        val avail = t.isLanguageAvailable(kmLocale)
+                        avail >= android.speech.tts.TextToSpeech.LANG_AVAILABLE
+                    } ?: false
+
+                    val speechText = if (isKm && isKmSupported) {
+                        "លោតបាន $count ដងហើយ"
+                    } else {
+                        "$count jumps completed!"
+                    }
+                    ttsInstance?.speak(speechText, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "jump_$count")
+                } catch (_: Throwable) {}
+
+                // 4. Haptic vibration alert
                 try {
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                         val vm = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
