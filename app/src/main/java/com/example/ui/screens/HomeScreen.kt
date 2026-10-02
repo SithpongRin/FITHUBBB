@@ -83,6 +83,10 @@ fun HomeScreen(
     val syncStatus by viewModel.syncStatus.collectAsState()
     val dynamicFeatureStatus by viewModel.dynamicFeatureStatus.collectAsState()
 
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.checkForUpdates(forceSimulate = false)
+    }
+
     // Calculations cached with remember to maximize scrolling and animation smoothness
     val totalSecondsToday = remember(todaysWorkouts) { todaysWorkouts.sumOf { it.durationSeconds } }
     val totalCaloriesToday = remember(todaysWorkouts) { todaysWorkouts.sumOf { it.caloriesBurned } }
@@ -236,6 +240,59 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Update Status Quick Badge & Trigger
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                if (updateStatus is UpdateStatus.Available) LimeAccent.copy(alpha = 0.2f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (updateStatus is UpdateStatus.Available) LimeAccent else Color.Transparent,
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                            .clickable { viewModel.checkForUpdates(forceSimulate = false) }
+                            .padding(horizontal = 10.dp)
+                            .testTag("header_update_check_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (updateStatus is UpdateStatus.Checking) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp,
+                                    color = LimeAccent
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = if (updateStatus is UpdateStatus.Available) Icons.Default.NewReleases else Icons.Default.CloudSync,
+                                    contentDescription = "Check for Updates",
+                                    tint = if (updateStatus is UpdateStatus.Available) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Text(
+                                text = when (updateStatus) {
+                                    is UpdateStatus.Checking -> if (isKm) "ពិនិត្យ..." else "Check"
+                                    is UpdateStatus.Available -> if (isKm) "មាន Update" else "Update"
+                                    is UpdateStatus.Downloading -> "${(updateStatus as UpdateStatus.Downloading).progressPercent}%"
+                                    is UpdateStatus.ReadyToInstall -> if (isKm) "ដំឡើង" else "Install"
+                                    else -> "v1.0.5"
+                                },
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (updateStatus is UpdateStatus.Available) LimeAccent else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+                    }
+
                     // Glass Language Switcher Button (Khmer / English)
                     Box(
                         modifier = Modifier
@@ -306,6 +363,262 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        // 2. High-Visibility In-App Update Banner Card
+        when (val status = updateStatus) {
+            is UpdateStatus.Available -> {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.5.dp, LimeAccent, RoundedCornerShape(20.dp)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(LimeAccent.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.SystemUpdate,
+                                            contentDescription = null,
+                                            tint = LimeAccent,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Column {
+                                        Text(
+                                            text = if (isKm) "មានកំណែថ្មី v${status.version}" else "New Update v${status.version}",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                        )
+                                        Text(
+                                            text = if (isKm) "ទំហំ៖ ${status.downloadSizeBytes / (1024 * 1024)} MB" else "Size: ${status.downloadSizeBytes / (1024 * 1024)} MB",
+                                            style = MaterialTheme.typography.labelSmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(LimeAccent)
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "NEW",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Black,
+                                            color = CharcoalBackground
+                                        )
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = if (isKm) status.notesKm else status.notesEn,
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Button(
+                                    onClick = { viewModel.startDownloadUpdate(status) },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = LimeAccent,
+                                        contentColor = CharcoalBackground
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudDownload,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (isKm) "អាប់ដែតឥឡូវនេះ" else "Update Now",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.dismissUpdate() },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        text = if (isKm) "បិទ" else "Dismiss",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            is UpdateStatus.Downloading -> {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, LimeAccent.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (isKm) "កំពុងទាញយកកំណែថ្មី v${status.version}..." else "Downloading update v${status.version}...",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Text(
+                                    text = "${status.progressPercent}%",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Black,
+                                        color = LimeAccent
+                                    )
+                                )
+                            }
+                            LinearProgressIndicator(
+                                progress = { status.progressPercent / 100f },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = LimeAccent,
+                                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            is UpdateStatus.ReadyToInstall -> {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.5.dp, SuccessGreen, RoundedCornerShape(20.dp)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = SuccessGreen,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    text = if (isKm) "ទាញយកចប់សព្វគ្រប់! កំណែ v${status.version}" else "Download Complete! v${status.version}",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+                            Button(
+                                onClick = { viewModel.installDownloadedApk(status.apkFile) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = SuccessGreen,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (isKm) "ដំឡើងឥឡូវនេះ" else "Install Now",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            is UpdateStatus.Error -> {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isKm) "មិនអាចពិនិត្យកំណែថ្មីបានទេ" else "Could not check for update",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                )
+                                Text(
+                                    text = status.message,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            TextButton(onClick = { viewModel.checkForUpdates(forceSimulate = false) }) {
+                                Text(
+                                    text = if (isKm) "សាកម្ដងទៀត" else "Retry",
+                                    fontWeight = FontWeight.Bold,
+                                    color = LimeAccent
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            else -> Unit
         }
 
 

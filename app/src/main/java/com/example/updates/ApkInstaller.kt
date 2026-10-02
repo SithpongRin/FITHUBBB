@@ -75,6 +75,7 @@ object ApkInstaller {
             connection.instanceFollowRedirects = true
             connection.connectTimeout = 15000
             connection.readTimeout = 30000
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) FithubApp/1.0.5")
             connection.connect()
 
             val code = connection.responseCode

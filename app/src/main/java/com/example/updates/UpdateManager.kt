@@ -41,110 +41,146 @@ sealed class UpdateStatus {
 
 object UpdateManager {
 
-    const val CURRENT_VERSION_NAME = "1.0.4"
-    const val CURRENT_VERSION_CODE = 5
+    const val CURRENT_VERSION_NAME = "1.0.5"
+    const val CURRENT_VERSION_CODE = 6
 
     private val _updateStatus = MutableStateFlow<UpdateStatus>(UpdateStatus.Idle)
     val updateStatus: StateFlow<UpdateStatus> = _updateStatus.asStateFlow()
 
-    // Configurable endpoint for checking updates from GitHub raw JSON
+    // Primary endpoint: raw githubusercontent; Fallback: GitHub API
     var customUpdateUrl: String = "https://raw.githubusercontent.com/SithpongRin/FITHUBBB/main/version.json"
+    private const val GITHUB_API_URL = "https://api.github.com/repos/SithpongRin/FITHUBBB/contents/version.json"
 
     suspend fun checkForUpdates(
         context: Context? = null,
         forceSimulateAvailable: Boolean = false
     ) = withContext(Dispatchers.IO) {
         _updateStatus.value = UpdateStatus.Checking
-        kotlinx.coroutines.delay(1000)
+        kotlinx.coroutines.delay(600)
 
         if (forceSimulateAvailable) {
             _updateStatus.value = UpdateStatus.Available(
-                version = "1.1.0",
-                versionCode = 2,
+                version = "1.0.5",
+                versionCode = 6,
                 notesEn = "Option 2 Direct In-App APK Updater with automatic download, live progress and package installer.",
-                notesKm = "មុខងារអាប់ដែត APK ស្វ័យប្រវត្តិក្នង App ផ្ទាល់ (ករណីទី ២)៖ ទាញយកលឿន និងដំឡើងជាន់គ្នាដោយមិនបាត់ទិន្នន័យ។",
+                notesKm = "មុខងារអាប់ដែត APK ស្វ័យប្រវត្តិក្នង App ផ្ទាល់៖ ទាញយកលឿន និងដំឡើងជាន់គ្នាដោយមិនបាត់ទិន្នន័យ។",
                 apkUrl = "demo_apk_stream",
-                downloadSizeBytes = 18_450_000L
+                downloadSizeBytes = 28_841_252L
             )
             return@withContext
         }
 
-        if (customUpdateUrl.isNotBlank() && customUpdateUrl.startsWith("http")) {
+        // Try primary raw URL first, then fallback to GitHub API
+        val candidateUrls = listOf(
+            customUpdateUrl,
+            "https://raw.githubusercontent.com/SithpongRin/FITHUBBB/refs/heads/main/version.json"
+        )
+
+        var fetchedJson: JSONObject? = null
+        var lastError = ""
+
+        for (endpoint in candidateUrls) {
             try {
-                var checkUrl = if (customUpdateUrl.contains("?")) "$customUpdateUrl&_t=${System.currentTimeMillis()}" else "$customUpdateUrl?_t=${System.currentTimeMillis()}"
-                var conn: HttpURLConnection
-                var redirectCount = 0
-
-                while (true) {
-                    val url = URL(checkUrl)
-                    conn = url.openConnection() as HttpURLConnection
-                    conn.connectTimeout = 10000
-                    conn.readTimeout = 10000
-                    conn.useCaches = false
-                    conn.instanceFollowRedirects = true
-
-                    val code = conn.responseCode
-                    if (code == HttpURLConnection.HTTP_MOVED_TEMP || code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_SEE_OTHER || code == 307 || code == 308) {
-                        val redirectUrl = conn.getHeaderField("Location")
-                        conn.disconnect()
-                        if (redirectUrl != null && redirectCount < 4) {
-                            checkUrl = redirectUrl
-                            redirectCount++
-                            continue
-                        }
-                    }
-
-                    if (code == HttpURLConnection.HTTP_OK) {
-                        val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                        val jsonStr = reader.readText()
-                        reader.close()
-                        conn.disconnect()
-                        val json = JSONObject(jsonStr)
-
-                        val remoteVersionCode = json.optInt("versionCode", 1)
-                        val remoteVersionName = json.optString("versionName", "1.0.0")
-                        val notesEn = json.optString("releaseNotesEn", "New update available.")
-                        val notesKm = json.optString("releaseNotesKm", "មានកំណែថ្មី។")
-                        val apkUrl = json.optString("apkUrl", "")
-                        val size = json.optLong("fileSizeBytes", 18_450_000L)
-
-                        val currentInstalledCode = try {
-                            com.example.BuildConfig.VERSION_CODE
-                        } catch (_: Throwable) {
-                            CURRENT_VERSION_CODE
-                        }
-
-                        if (remoteVersionCode > currentInstalledCode) {
-                            _updateStatus.value = UpdateStatus.Available(
-                                version = remoteVersionName,
-                                versionCode = remoteVersionCode,
-                                notesEn = notesEn,
-                                notesKm = notesKm,
-                                apkUrl = apkUrl,
-                                downloadSizeBytes = size
-                            )
-                        } else {
-                            _updateStatus.value = UpdateStatus.UpToDate
-                        }
-                        return@withContext
-                    } else {
-                        conn.disconnect()
-                        _updateStatus.value = UpdateStatus.Error(
-                            if (code == 404)
-                                "HTTP 404: មិនអាចទាញយក version.json បានទេ។ សូមប្រាកដថា GitHub Repository FITHUBBB ត្រូវបានកំណត់ជា Public។"
-                            else
-                                "HTTP Error $code ពេលពិនិត្យកំណែថ្មី។"
-                        )
-                        return@withContext
-                    }
+                val jsonStr = fetchJsonString(endpoint)
+                if (!jsonStr.isNullOrBlank()) {
+                    fetchedJson = JSONObject(jsonStr)
+                    break
                 }
             } catch (e: Exception) {
-                _updateStatus.value = UpdateStatus.Error("កំហុសបណ្តាញ៖ ${e.localizedMessage ?: "មិនអាចភ្ជាប់ទៅកាន់ GitHub បានទេ"}")
-                return@withContext
+                lastError = e.localizedMessage ?: "Network error"
             }
         }
 
-        _updateStatus.value = UpdateStatus.UpToDate
+        // Fallback: GitHub Contents API with base64 decoding
+        if (fetchedJson == null) {
+            try {
+                val apiResponse = fetchJsonString(GITHUB_API_URL)
+                if (!apiResponse.isNullOrBlank()) {
+                    val root = JSONObject(apiResponse)
+                    val encoded = root.optString("content", "").replace("\n", "").trim()
+                    if (encoded.isNotEmpty()) {
+                        val decodedBytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
+                        fetchedJson = JSONObject(String(decodedBytes, Charsets.UTF_8))
+                    }
+                }
+            } catch (e: Exception) {
+                lastError = e.localizedMessage ?: lastError
+            }
+        }
+
+        if (fetchedJson != null) {
+            val remoteVersionCode = fetchedJson.optInt("versionCode", 1)
+            val remoteVersionName = fetchedJson.optString("versionName", "1.0.0")
+            val notesEn = fetchedJson.optString("releaseNotesEn", "New update available.")
+            val notesKm = fetchedJson.optString("releaseNotesKm", "មានកំណែថ្មី។")
+            val apkUrl = fetchedJson.optString("apkUrl", "")
+            val size = fetchedJson.optLong("fileSizeBytes", 28_841_252L)
+
+            val currentInstalledCode = try {
+                com.example.BuildConfig.VERSION_CODE
+            } catch (_: Throwable) {
+                CURRENT_VERSION_CODE
+            }
+
+            if (remoteVersionCode > currentInstalledCode) {
+                _updateStatus.value = UpdateStatus.Available(
+                    version = remoteVersionName,
+                    versionCode = remoteVersionCode,
+                    notesEn = notesEn,
+                    notesKm = notesKm,
+                    apkUrl = apkUrl,
+                    downloadSizeBytes = size
+                )
+            } else {
+                _updateStatus.value = UpdateStatus.UpToDate
+            }
+            return@withContext
+        }
+
+        _updateStatus.value = UpdateStatus.Error(
+            if (lastError.isNotBlank()) "កំហុសបណ្តាញ៖ $lastError"
+            else "មិនអាចទាញយកព័ត៌មានអាប់ដែតបានទេ។ សូមពិនិត្យការតភ្ជាប់អ៊ីនធឺណិត។"
+        )
+    }
+
+    private fun fetchJsonString(urlStr: String): String? {
+        val checkUrl = if (urlStr.contains("?")) "$urlStr&_t=${System.currentTimeMillis()}" else "$urlStr?_t=${System.currentTimeMillis()}"
+        var currentUrl = checkUrl
+        var redirectCount = 0
+
+        while (redirectCount < 4) {
+            val url = URL(currentUrl)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
+            conn.useCaches = false
+            conn.instanceFollowRedirects = true
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) FithubApp/1.0.5")
+            conn.setRequestProperty("Accept", "application/json, text/plain, */*")
+
+            val code = conn.responseCode
+            if (code == HttpURLConnection.HTTP_MOVED_TEMP || code == HttpURLConnection.HTTP_MOVED_PERM || code == HttpURLConnection.HTTP_SEE_OTHER || code == 307 || code == 308) {
+                val redirectUrl = conn.getHeaderField("Location")
+                conn.disconnect()
+                if (redirectUrl != null) {
+                    currentUrl = redirectUrl
+                    redirectCount++
+                    continue
+                }
+            }
+
+            if (code == HttpURLConnection.HTTP_OK) {
+                val reader = BufferedReader(InputStreamReader(conn.inputStream, Charsets.UTF_8))
+                val content = reader.readText()
+                reader.close()
+                conn.disconnect()
+                return content
+            } else {
+                conn.disconnect()
+                return null
+            }
+        }
+        return null
     }
 
     suspend fun startDownload(context: Context, available: UpdateStatus.Available) {

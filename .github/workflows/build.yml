@@ -60,6 +60,7 @@ jobs:
     - name: Clean Old Assets
       run: |
         gh release delete-asset latest app-debug.apk -y || true
+        gh release delete-asset latest Fithub.apk -y || true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -71,10 +72,11 @@ jobs:
         tag_name: latest
         name: "Fithub Latest APK"
         make_latest: "true"
+        overwrite: true
         body: |
-          # ⚡ FITHUB App Latest Release
+          # FITHUB App Latest Release
           
-          ### 📲 [👉 ចុចទីនេះដើម្បីទាញយក Fithub.apk ដោយផ្ទាល់](https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk)
+          ### ចុចទីនេះដើម្បីទាញយក Fithub.apk ដោយផ្ទាល់: https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk
           
           ---
           **ការណែនាំ៖**

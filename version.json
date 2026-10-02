@@ -1,9 +1,9 @@
 {
-  "versionCode": 5,
-  "versionName": "1.0.4",
+  "versionCode": 6,
+  "versionName": "1.0.5",
   "apkUrl": "https://github.com/SithpongRin/FITHUBBB/releases/download/latest/Fithub.apk",
-  "releaseNotesEn": "Update v1.0.4: Real external cloud sync server persistence across devices and reinstalls, plus high-end sports UI design modernization across Home and Workout screens.",
-  "releaseNotesKm": "កំណែថ្មី v1.0.4៖ Sync ទិន្នន័យលើ Server ខាងក្រៅស្វ័យប្រវត្តិ (ដូរទូរសព្ទថ្មី ឬ install ឡើងវិញមិនបាត់ទិន្នន័យចាស់ឡើយ) រួមទាំងការកែលម្អ UI Dashboard និងលំហាត់ប្រាណបែបទំនើបស៊ីវិល័យ។",
+  "releaseNotesEn": "Update v1.0.5: Instant Home Screen update banner and notification, full external Cloud Sync server persistence across devices, and luxury sports UI modernization.",
+  "releaseNotesKm": "កំណែថ្មី v1.0.5៖ បង្ហាញផ្ទាំង Update លើ Home Screen ភ្លាមៗ, ប្រព័ន្ធ Cloud Sync លើ Server ខាងក្រៅពេញលេញមិនបាត់ទិន្នន័យ, និង UI កីឡាទំនើបស៊ីវិល័យ។",
   "fileSizeBytes": 29300000,
   "mandatory": false
 }
