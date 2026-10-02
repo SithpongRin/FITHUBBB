@@ -104,20 +104,41 @@ class DailyStepTracker(
         } catch (_: Throwable) {}
     }
 
+    var isSuspended: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                if (value) {
+                    suspensionStartHardwareStep = lastKnownHardwareStep
+                } else if (suspensionStartHardwareStep > 0 && lastKnownHardwareStep > suspensionStartHardwareStep) {
+                    val stepsDuringSuspension = lastKnownHardwareStep - suspensionStartHardwareStep
+                    suspendedOffset += stepsDuringSuspension
+                    suspensionStartHardwareStep = -1
+                }
+            }
+        }
+    private var lastKnownHardwareStep: Int = -1
+    private var suspensionStartHardwareStep: Int = -1
+    private var suspendedOffset: Int = 0
+
     override fun onSensorChanged(event: SensorEvent?) {
         if (!_isTrackingEnabled.value || event == null) return
 
         when (event.sensor.type) {
             Sensor.TYPE_STEP_COUNTER -> {
                 val totalHardwareSteps = event.values[0].toInt()
+                lastKnownHardwareStep = totalHardwareSteps
+                if (isSuspended) return
                 handleHardwareStepCounter(totalHardwareSteps)
             }
             Sensor.TYPE_STEP_DETECTOR -> {
+                if (isSuspended) return
                 if (event.values[0] == 1.0f) {
                     incrementSteps(1)
                 }
             }
             Sensor.TYPE_ACCELEROMETER -> {
+                if (isSuspended) return
                 handleAccelerometerSteps(event.values)
             }
         }
@@ -135,7 +156,7 @@ class DailyStepTracker(
             savedBaseline
         }
 
-        val calculatedTodaySteps = max(0, totalHardwareSteps - baseline)
+        val calculatedTodaySteps = max(0, totalHardwareSteps - baseline - suspendedOffset)
         updateSteps(calculatedTodaySteps)
     }
 

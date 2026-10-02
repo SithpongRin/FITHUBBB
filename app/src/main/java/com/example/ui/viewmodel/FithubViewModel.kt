@@ -233,6 +233,11 @@ class FithubViewModel(application: Application) : AndroidViewModel(application) 
     init {
         checkRecoverableSession()
         observeNetworkForAutoSync()
+        viewModelScope.launch {
+            activeWorkout.collect { workout ->
+                stepTracker.isSuspended = workout.isActive && !workout.isPaused && (workout.type == "JUMPING" || workout.type == "WEIGHTLIFTING")
+            }
+        }
     }
 
     private fun observeNetworkForAutoSync() {
