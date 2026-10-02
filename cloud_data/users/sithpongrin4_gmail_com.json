@@ -4,7 +4,7 @@
   "passwordHash": "",
   "displayName": "Sithpongrin4",
   "photoUrl": "https:\/\/api.dicebear.com\/7.x\/initials\/png?seed=Sithpongrin4&backgroundColor=c6ff00&textColor=121212",
-  "updatedAt": 1790938203611,
+  "updatedAt": 1790938533017,
   "profile": {
     "fullName": "Sithpongrin4",
     "age": 21,
@@ -17,6 +17,23 @@
     "updatedAt": 1790932929748
   },
   "workouts": [
+    {
+      "id": "59254517-1700-47c6-a317-f4c801b45d0d",
+      "type": "RUNNING",
+      "startTime": 1790937459777,
+      "endTime": 1790937526227,
+      "durationSeconds": 65,
+      "caloriesBurned": 3.20717363575802,
+      "distanceMeters": 49.93108786520768,
+      "averagePaceSecPerKm": 1301.7941883315632,
+      "jumpCount": 0,
+      "totalVolumeKg": 0,
+      "totalReps": 0,
+      "localDate": "2026-10-02",
+      "notes": "Morning Run",
+      "createdAt": 1790937526227,
+      "updatedAt": 1790937526227
+    },
     {
       "id": "96ad8502-aebf-489c-afa2-3484c4134334",
       "type": "WALKING",
@@ -50,23 +67,6 @@
       "notes": "Jump Rope Cardio",
       "createdAt": 1790929020630,
       "updatedAt": 1790929020630
-    },
-    {
-      "id": "59254517-1700-47c6-a317-f4c801b45d0d",
-      "type": "RUNNING",
-      "startTime": 1790937459777,
-      "endTime": 1790937526227,
-      "durationSeconds": 65,
-      "caloriesBurned": 3.20717363575802,
-      "distanceMeters": 49.93108786520768,
-      "averagePaceSecPerKm": 1301.7941883315632,
-      "jumpCount": 0,
-      "totalVolumeKg": 0,
-      "totalReps": 0,
-      "localDate": "2026-10-02",
-      "notes": "Morning Run",
-      "createdAt": 1790937526227,
-      "updatedAt": 1790937526227
     }
   ],
   "sleep": [],
@@ -78,7 +78,7 @@
       "goalSteps": 8000,
       "distanceMeters": 1214.628,
       "caloriesBurned": 66.94800000000001,
-      "updatedAt": 1790938177890
+      "updatedAt": 1790938334511
     }
   ]
 }
