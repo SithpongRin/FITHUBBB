@@ -4,7 +4,7 @@
   "passwordHash": "",
   "displayName": "Sithpongrin4",
   "photoUrl": "https:\/\/api.dicebear.com\/7.x\/initials\/png?seed=Sithpongrin4&backgroundColor=c6ff00&textColor=121212",
-  "updatedAt": 1790952887957,
+  "updatedAt": 1791033299346,
   "profile": {
     "fullName": "ក្តីពិ ស",
     "age": 21,
@@ -39,12 +39,12 @@
   "nutrition": [],
   "dailySteps": [
     {
-      "localDate": "2026-10-02",
-      "stepCount": 2698,
+      "localDate": "2026-10-03",
+      "stepCount": 0,
       "goalSteps": 8000,
-      "distanceMeters": 2055.876,
-      "caloriesBurned": 113.316,
-      "updatedAt": 1790952689559
+      "distanceMeters": 0,
+      "caloriesBurned": 0,
+      "updatedAt": 1791011325762
     }
   ]
 }
